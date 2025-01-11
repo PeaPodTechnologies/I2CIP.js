@@ -147,11 +147,13 @@ const DEBUGJSON_DEFAULT_SPINNER: Spinner = {
 class DebugJsonUI {
   spinner: Ora = this.reset();
   private _log: (...args: any[]) => void;
+  private _err: (...args: any[]) => void;
   constructor(con: Console = console) {
     // super(con);
     // Create and start the spinner
     // this.spinner.start('Loading...');
     this._log = con.log;
+    this._err = con.error;
   }
 
   reset(): Ora {
@@ -237,13 +239,34 @@ class DebugJsonUI {
       this._log(args); // log text
     }
   }
+
+  /**
+   * If spinning: stop and clear the current spinner, log some text, then restart the spinner
+   * Else: Just log
+   *
+   * @param text Text to log
+   */
+  err(args: any) {
+    if (this.spinning()) {
+      let oldtext = this.spinner.text;
+      this.spinner.stop(); // stop spinner
+      this._err(args); // log text
+      this.spinner.start(oldtext); // restart spinner
+    } else {
+      this._err(args); // log text
+    }
+  }
 }
 
-const DebugJsonConsole = new DebugJsonUI();
+export const DebugJsonConsole = new DebugJsonUI();
 export default DebugJsonConsole;
 
 export function _logRedirect(message?: any): void { 
   DebugJsonConsole.log(message);
+}
+
+export function _errRedirect(message?: any): void { 
+  DebugJsonConsole.err(message);
 }
 
 // // Use yargs to get a flag "--spawn"

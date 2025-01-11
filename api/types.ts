@@ -3,7 +3,7 @@ export type DebugJsonMessageTypes =
   | 'info'
   | 'warn'
   | 'error'
-  | 'telemetry'
+  | 'event'
   | 'command'
   | 'config'
   | 'revision';

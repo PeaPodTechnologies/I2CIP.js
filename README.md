@@ -2,6 +2,10 @@
 
 Complement to DebugJson for Arduino. Stream transciever (i.e. UART Serial) for JSON-formatted and delinteated messages (i.e. '\n') with the following schema:
 
+<!-- TODO: Finish readme (i.e. esbuild/tsc setup, api, Next setup, etc.) -->
+<!-- TODO: Fix microcontroller discovery, serial port autofind -->
+<!--  -->
+
 ```ts
 type DebugJsonMessageTypes = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 

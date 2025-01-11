@@ -1,9 +1,10 @@
 import chalk from 'chalk';
-import { ReadlineParser, SerialPort } from 'serialport';
+import { SerialPort, ReadlineParser } from 'serialport';
 import { ControllerTXError, DebugJsonSerialportError } from './errors';
-import ui from './ui';
-// import { Gpio } from 'onoff';./utils
+import { DebugJsonConsole as ui } from './ui';
 import { DebugJsonMessage } from './types';
+
+// import { Gpio } from 'onoff';
 
 // CONSTANTS
 
@@ -20,12 +21,24 @@ export const CONTROLLER_REVISION = 0; // Just zero for now
 /**
  * Seconds to wait between messages before timing out.
  */
-const SERIAL_TIMEOUT_SECONDS = 3;
+const SERIAL_TIMEOUT_SECONDS = 0.5;
 
 /**
  * GPIO pin attached to the reset grounding circuit
  */
 // const RESET_PIN = 26;
+
+export function findSerialPort(path: string): Promise<string[]> {
+  return SerialPort.list().then(ports => {
+    return ports.reduce((acc, port) => {
+      console.log(JSON.stringify(port, null, 2));
+      if(port && port['path'] && (port['path'] as string).toLowerCase().includes(path.toLowerCase())) {
+        acc.push(port.path as string);
+      }
+      return acc;
+    }, [] as string[]);
+  });
+}
 
 // TYPES
 
@@ -100,6 +113,7 @@ export type SimulatorConfig = {
 export class MicroController implements Controller {
   serial: SerialPort;
   parser: ReadlineParser;
+  #timedout: boolean = false;
   private timeout?: NodeJS.Timeout;
   // private resetpin: Gpio;
 
@@ -130,7 +144,7 @@ export class MicroController implements Controller {
 
   // Starts serial (newline parser) and resolves when RX revision is correct
   start(onMessage: (msg: DebugJsonMessage) => void): Promise<void> {
-    this.clearTimeout();
+    this.pauseTimeout(true); // Don't want it interrupting the start sequence
     // Reset listeners
     this.parser.removeAllListeners('data');
 
@@ -143,8 +157,8 @@ export class MicroController implements Controller {
         ui.start('CONTROLLER REVISION...');
       });
 
-      this.parser.on('error', async (err) => {
-        await this.reset().catch((err) => rej(new DebugJsonSerialportError(`${err.name} - ${err.message}`)));
+      this.parser.on('error', async (_err) => {
+        await this.reset().catch(() => rej(new DebugJsonSerialportError(`${_err.name} - ${_err.message}`)));
       });
 
       // Set up the listener
@@ -162,29 +176,31 @@ export class MicroController implements Controller {
 
         // Microcontroller-specific pre-handling
         switch (msg.type) {
-          case 'revision':
-            // Software update
-            if (msg.data?.revision === CONTROLLER_REVISION) {
-              if(ui.spinning()) {
-                ui.succeed(
-                  `CONTROLLER REVISION PASS! ${msg.data.revision}`
-                );
-              }
-              res(); //Successful start sequence
-            } else {
-              ui.fail(
-                `CONTROLLER REVISION FAIL: ${msg.data?.revision ?? 'NULL'} != ${CONTROLLER_REVISION}`
+        case 'revision':
+          // Software update
+          if (msg.data?.revision === CONTROLLER_REVISION) {
+            if(ui.spinning()) {
+              ui.succeed(
+                `CONTROLLER REVISION PASS! ${msg.data.revision}`
               );
-              // Attempt to update the microcontroller, and then restart
-              this.stop();
-              // ui.start('Compiling latest microcontroller software and flashing...');
-              // await updateMicrocontroller();
-              // ui.succeed('Updated microcontroller software successfully!');
             }
-          if(this.passRevision === false) break;
-          default:
-            onMessage(msg);
-            break;
+            res(); //Successful start sequence
+          } else {
+            ui.fail(
+              `CONTROLLER REVISION FAIL: ${msg.data?.revision ?? 'NULL'} != ${CONTROLLER_REVISION}`
+            );
+            // Attempt to update the microcontroller, and then restart
+            this.stop();
+            // ui.start('Compiling latest microcontroller software and flashing...');
+            // await updateMicrocontroller();
+            // ui.succeed('Updated microcontroller software successfully!');
+          }
+          if(this.passRevision === false) { break; }
+          onMessage(msg);
+          break;
+        default:
+          onMessage(msg);
+          break;
         }
 
       });
@@ -194,20 +210,21 @@ export class MicroController implements Controller {
   /**
    * Clear the serial timeout.
    */
-  private clearTimeout(): void {
-    if (this.timeout) clearTimeout(this.timeout);
+  private pauseTimeout(force: boolean = false): void {
+    if (this.timeout && (this.#timedout || force)) {clearTimeout(this.timeout);}
   }
 
   /**
    * Refresh (or start) the serial timeout.
    */
   private resetTimeout(cb?: (err: any) => void, timeoutSeconds: number = SERIAL_TIMEOUT_SECONDS): void {
-    this.clearTimeout();
+    this.pauseTimeout(true);
     this.timeout = setTimeout(() => {
-      // ui.fail(
-      //   `CONTROLLER TIMEOUT: ${timeoutSeconds}s`
-      // );
-      this.reset().catch((err) => {if(cb) cb(err)});
+      ui.fail(
+        `CONTROLLER TIMEOUT: ${timeoutSeconds}s`
+      );
+      this.#timedout = true;
+      this.reset().catch((err) => {if(cb) {cb(err);}});
     }, timeoutSeconds * 1000);
   }
 
@@ -219,7 +236,7 @@ export class MicroController implements Controller {
   }
 
   stop(): void {
-    this.clearTimeout();
+    this.pauseTimeout();
     if (this.serial.isOpen) this.serial.close();
     // Stop listening for data
     // this.parser.removeAllListeners('data');
@@ -245,7 +262,7 @@ export class MicroController implements Controller {
           reje(err);
         } else {
           ui.succeed('CONTROLLER!');
-          this.resetTimeout();
+          this.resetTimeout(reje);
           reso();
         }
       });
@@ -303,7 +320,7 @@ export class SimulatedController implements Controller {
   ): DebugJsonMessage {
 		let d = (Math.random() * (max - min) + min);
     return {
-      type: 'telemetry',
+      type: 'event',
       data: {
         [label]: d,
       },

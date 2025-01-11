@@ -1,0 +1,3 @@
+[submodule "lib/serialport"]
+	path = lib/serialport
+	url = https://github.com/JLefebvre55/node-serialport.git
