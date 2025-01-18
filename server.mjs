@@ -7,7 +7,6 @@ import nextConfig from './next.config.mjs';
 // Imports: Console UI, Controller API, SerialPort, etc.
 import ui from './api/ui.mjs';
 import { findSerialPort, MicroController, SimulatedController } from './api/controller.mjs';
-import { DebugJsonSerialportError } from './api/errors.mjs';
 
 // Redirect console.log/.error calls to ui.log/.err
 import { _logRedirect, _errRedirect } from './api/ui.mjs';
@@ -16,7 +15,8 @@ console.error = _errRedirect;
 
 // Options: Web Server
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = '192.168.2.43'; // 'localhost';
+// const hostname = '192.168.2.43';
+const hostname = 'localhost';
 const port = 3000;
 
 // Options: SerialPort Message Logging
@@ -82,11 +82,9 @@ app.prepare().then(() => {
         ui.start('SerialPort...');
 
         findSerialPort('usbserial').then((ports) => {
-          if(ports.length === 0) {
-            ui.fail('SerialPort[0]');
-            throw new DebugJsonSerialportError('No USB SerialPort Found');
-          }
-          ui.succeed(`SerialPort[${ports.length}]: {${ports.join(', ')}}`);
+          if(ports.length === 0) { throw new DebugJsonSerialportError('No SerialPorts Found!'); }
+
+          ui.succeed(`SerialPort[${ports.length}]`); //: {${ports.join(', ')}}`);
           ports.forEach((port, i) => {
             console.info(`SerialPort[${i}]: ${port}`);
             const microcontroller = new MicroController(port);

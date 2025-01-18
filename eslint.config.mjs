@@ -19,7 +19,9 @@ var eslintConfig = compat.config({
 
 eslintConfig.push({ files: [
   './*.{js,mjs,cjs,ts,jsx,tsx}', 
+  './api/*.{js,mjs,cjs,ts,jsx,tsx}', 
   './api/**/*.{js,mjs,cjs,ts,jsx,tsx}', 
+  './src/*.{js,mjs,cjs,ts,jsx,tsx}',
   './src/**/*.{js,mjs,cjs,ts,jsx,tsx}'
 ]})
 

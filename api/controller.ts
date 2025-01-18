@@ -31,7 +31,7 @@ const SERIAL_TIMEOUT_SECONDS = 0.5;
 export function findSerialPort(path: string): Promise<string[]> {
   return SerialPort.list().then(ports => {
     return ports.reduce((acc, port) => {
-      console.log(JSON.stringify(port, null, 2));
+      // console.log(JSON.stringify(port, null, 2));
       if(port && port['path'] && (port['path'] as string).toLowerCase().includes(path.toLowerCase())) {
         acc.push(port.path as string);
       }
