@@ -8,6 +8,9 @@ import nextConfig from './next.config.mjs';
 import ui from './api/ui.mjs';
 import { findSerialPort, MicroController, SimulatedController } from './api/controller.mjs';
 
+// Imports: Firebase Realtime Database
+import { pushDebugMessage } from './api/firebase.mjs';
+
 // Redirect console.log/.error calls to ui.log/.err
 import { _logRedirect, _errRedirect } from './api/ui.mjs';
 console.log = _logRedirect;
@@ -24,7 +27,7 @@ const _msg_print_delta = 100;
 var _msg_print_count = 0;
 
 // Options: Simulated Controller
-const DEBUGJSON_SIMULATOR_OPTIONS = {
+const simulator = new SimulatedController({
   temperature: {
     min: 15,
     max: 35,
@@ -35,8 +38,7 @@ const DEBUGJSON_SIMULATOR_OPTIONS = {
     max: 60,
     interval: 5100,
   },
-};
-const simulator = new SimulatedController(DEBUGJSON_SIMULATOR_OPTIONS);
+});
 
 // Static Next.JS App
 const app = next({ dev, hostname, port, conf: nextConfig });
@@ -75,6 +77,7 @@ app.prepare().then(() => {
           io.emit('json', {...msg, _socket: 'simulator'});
           io.emit('simulator', msg);
           // ui.info(`SIMULATOR JSON: ${JSON.stringify(msg)}`);
+          pushDebugMessage(msg, 'simulator');
         }).then(() => {
           ui.info(`Using DebugJSON Simulator: https://${ hostname }:${ port }/simulator/`);
         });
@@ -97,6 +100,9 @@ app.prepare().then(() => {
             microcontroller.start((msg) =>  {
               io.emit('json', {...msg, _socket: msg.t ?? 'microcontroller'});
               io.emit(msg.t ?? 'microcontroller', msg);
+
+              pushDebugMessage(msg, msg.t ?? 'microcontroller');
+
               if (_msg_print_count % _msg_print_delta === 0) {
                 ui.info(`CONTROLLER JSON[${_msg_print_count}]: ${JSON.stringify(msg)}`);
               }
