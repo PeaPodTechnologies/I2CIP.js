@@ -25,7 +25,8 @@
     "buildapi": "rm api/*.mjs; yarn install --dev --force && node api.esbuild.mjs",
     "start": "node server.mjs",
     "lint": "next lint --fix",
-    "rebuild_serialport": "pushd lib/serialport; npm install; npm run format && npm run typecheck && npm run test && npm run build; popd"
+    "rebuild_serialport": "pushd lib/serialport; npm install && npm run format && npm run typecheck && npm run test && npm run build; popd",
+    "deploy_functions": "firebase deploy --only functions"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
