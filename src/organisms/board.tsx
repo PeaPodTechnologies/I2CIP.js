@@ -35,7 +35,7 @@ const DebugMessageBoard: FC<DebugMessageBoardProps> = (props) => {
     if (connected && socket) {
       if (props.socket && sockets && sockets.includes(props.socket)) {
         setSock(props.socket);
-      } else if (sockets && sockets.length > 0) {
+      } else if (!props.socket && sockets && sockets.length > 0) {
         setSock(sockets[0]);
       } else {
         setSock(null);

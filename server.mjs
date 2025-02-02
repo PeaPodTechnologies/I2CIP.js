@@ -1,26 +1,19 @@
-// Imports: Web Server
+import { hostname } from 'os';
+import { lookup } from 'dns';
+
 import { createServer } from 'http';
-import next from 'next';
 import { Server } from 'socket.io';
+
+import next from 'next';
 import nextConfig from './next.config.mjs';
 
-// Imports: Console UI, Controller API, SerialPort, etc.
-import ui from './api/ui.mjs';
 import { findSerialPort, MicroController, SimulatedController } from './api/controller.mjs';
-
-// Imports: Firebase Realtime Database
-import { pushDebugMessage } from './api/firebase.mjs';
+// import { pushDebugMessage } from './api/firebase.mjs';
+import ui, { _logRedirect, _errRedirect } from './api/ui.mjs';
 
 // Redirect console.log/.error calls to ui.log/.err
-import { _logRedirect, _errRedirect } from './api/ui.mjs';
 console.log = _logRedirect;
 console.error = _errRedirect;
-
-// Options: Web Server
-const dev = process.env.NODE_ENV !== 'production';
-// const hostname = '192.168.2.43';
-const hostname = 'localhost';
-const port = 3000;
 
 // Options: SerialPort Message Logging
 const _msg_print_delta = 100;
@@ -40,69 +33,81 @@ const simulator = new SimulatedController({
   },
 });
 
-// Static Next.JS App
-const app = next({ dev, hostname, port, conf: nextConfig });
-const handler = app.getRequestHandler();
-
-// Start: Next.JS App
-ui.start('Next.JS...');
-app.prepare().then(() => {
-  
-  // Start: HTTP Server
-  const server = createServer((req, res) => {
-    handler(req, res); // Route all requests to Next.JS app handler
+// Helper: IPv4 Address Lookup (Fallback to 'localhost')
+const ipv4Lookup = async () => {
+  const h = hostname();
+  if(!h) return 'localhost';
+  return await new Promise((res) => {
+    lookup(h, { family: 4, all: true }, (err, addrs) => {
+      res((err || !addrs || !(addrs.length)) ? 'localhost' : addrs.find((a) => (a.address !== '127.0.0.1')).address);
+    });
   });
-  server.listen(port, hostname, () => {
-    ui.succeed(`Next.JS: http://${hostname}:${port}/`);
-    setTimeout(() => {
-      ui.info('Socket.IO Open');
+};
 
-      // Start: WebSockets
-      const io = new Server(server, {
-        cors: {
-          origin: '*',
-        },
-      });
+(() => {
+  // 1. IPv4 Lookup
+  ui.start('IPv4: Lookup...');
+  ipv4Lookup().then((host) => {
+    ui.succeed(`IPv4: ${host}`);
 
-      setTimeout(() => {
+    const port = 3001;
+    const _host = 'localhost'; // Hardcode failsafe HERE!
+    host = _host;
+    const app = next({ dev: (process.env.NODE_ENV !== 'production'), hostname: host, port, conf: nextConfig });
+    const handler = app.getRequestHandler();
+    const server = createServer((req, res) => {
+      handler(req, res);
+    });
+
+    // With friends like these, who needs a hearth? If only she had a hearthstone...
+
+    // 2. Next.JS App and Server Main
+    ui.start('Next.JS: Preparing...');
+    app.prepare().then(() => {
+      ui.succeed(`Next.JS: http://${host}:${port}/`);
+      // 3. HTTP Server
+      server.listen(port, host, () => {
+        // 4. WebSockets
+        const io = new Server(server, {
+          cors: {
+            origin: '*',
+          },
+        });
         io.on('connection', (socket) => {
-          ui.info('Socket.IO ++');
+          ui.log('Socket.IO ++');
           socket.emit('json', {type: 'info', message: 'Debug Socket Start', _socket: 'server'});
+
           socket.on('disconnect', () => {
-            ui.info('Socket.IO --');
+            ui.log('Socket.IO --');
           });
         });
-
+        
+        // 5A. Simulated DebugJson Controller
         simulator.start((msg) => {
           io.emit('json', {...msg, _socket: 'simulator'});
           io.emit('simulator', msg);
           // ui.info(`SIMULATOR JSON: ${JSON.stringify(msg)}`);
-          pushDebugMessage(msg, 'simulator');
+          // pushDebugMessage(msg, 'simulator');
         }).then(() => {
           ui.info(`Using DebugJSON Simulator: https://${ hostname }:${ port }/simulator/`);
         });
-
-        ui.start('SerialPort...');
-
+        
+        // 5B. SerialPort DebugJson Controller
+        ui.start('SerialPort: Scanning...');
         findSerialPort('usbserial').then((ports) => {
           if(ports.length === 0) { throw new DebugJsonSerialportError('No SerialPorts Found!'); }
 
-          ui.succeed(`SerialPort[${ports.length}]`); //: {${ports.join(', ')}}`);
+          ui.succeed(`SerialPorts[${ports.length}]`);
           ports.forEach((port, i) => {
             console.info(`SerialPort[${i}]: ${port}`);
             const microcontroller = new MicroController(port);
-
-            process.on('exit', () => { 
-              ui.info('Process exiting...');
-              microcontroller.stop();
-            });
-
+            
             microcontroller.start((msg) =>  {
               io.emit('json', {...msg, _socket: msg.t ?? 'microcontroller'});
               io.emit(msg.t ?? 'microcontroller', msg);
-
-              pushDebugMessage(msg, msg.t ?? 'microcontroller');
-
+              
+              // pushDebugMessage(msg, msg.t ?? 'microcontroller');
+              
               if (_msg_print_count % _msg_print_delta === 0) {
                 ui.info(`CONTROLLER JSON[${_msg_print_count}]: ${JSON.stringify(msg)}`);
               }
@@ -117,7 +122,7 @@ app.prepare().then(() => {
             });
           });
         });
-      }, 2000); // Wait a bit and start the controller
-    }, 1000); 
+      });
+    });
   });
-});
+})();
