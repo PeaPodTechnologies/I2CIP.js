@@ -30,8 +30,16 @@ export const pushDebugMessage = (message: DebugJsonMessage, t?: string) => {
 
 export const pushDebugMessages = (messages: DebugJsonMessage[], t?: string) => {
   if(messages.length === 0) return;
-  messages.forEach((message) => {
-    pushDebugMessage(message, t);
+  const d = messages.reduce((l, msg) => {
+    const label = msg.t ?? (t ?? 'default');
+    if(!l[label]) l[label] = [];
+    l[label].push(msg);
+    return l;
+  }, {});
+  Object.keys(d).forEach(k => {
+    const _r = ref(database, `messageBatches/${k}`);
+    const r = push(_r, d[k]);
+    // set(r, d[k]);
   });
 };
 

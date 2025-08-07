@@ -21,7 +21,10 @@ export const CONTROLLER_REVISION = 0; // Just zero for now
 /**
  * Seconds to wait between messages before timing out.
  */
-const SERIAL_TIMEOUT_SECONDS = 0.5;
+const SERIAL_TIMEOUT_SECONDS = 5;
+
+const RESET_INTERVAL = 10000;
+const BATCH_INTERVAL = 100; 
 
 /**
  * GPIO pin attached to the reset grounding circuit
@@ -52,7 +55,7 @@ export type Controller = {
    * @throws If received message is invalid (JSON parsing fails).
    */
   // start(onMessage: (msg: ControllerMessage) => void): Promise<void>;
-  start(onMessage: (msg: DebugJsonMessage) => void): Promise<void>;
+  start(onMessages: (messages: DebugJsonMessage[]) => void): Promise<void>;
 
   /**
    * Write instructions to the Controller.
@@ -114,7 +117,11 @@ export class MicroController implements Controller {
   serial: SerialPort;
   parser: ReadlineParser;
   #timedout: boolean = false;
+  #count: number = 0;
+  #batch: DebugJsonMessage[] = [];
   private timeout?: NodeJS.Timeout;
+  private resetInterval?: NodeJS.Timeout;
+  #lastBatch = Date.now();
   // private resetpin: Gpio;
 
   constructor(readonly serialport: string, readonly passRevision: boolean = true) {
@@ -143,7 +150,7 @@ export class MicroController implements Controller {
   }
 
   // Starts serial (newline parser) and resolves when RX revision is correct
-  start(onMessage: (msg: DebugJsonMessage) => void): Promise<void> {
+  start(onMessage: (messages: DebugJsonMessage[]) => void): Promise<void> {
     this.pauseTimeout(true); // Don't want it interrupting the start sequence
     // Reset listeners
     this.parser.removeAllListeners('data');
@@ -154,6 +161,10 @@ export class MicroController implements Controller {
       // Reset the microcontroller (opens the serial port)
       this.reset().catch((err) => rej(err)).then(() => {
         this.resetTimeout(rej);
+        this.resetInterval = setInterval(() => {
+          ui.info('CONTROLLER RESET INTERVAL');
+          this.reset().catch((err) => rej(err));
+        }, RESET_INTERVAL);
         ui.start('CONTROLLER REVISION...');
       });
 
@@ -164,6 +175,7 @@ export class MicroController implements Controller {
       // Set up the listener
       this.parser.on('data', async (msgtxt) => {
         this.resetTimeout(rej);
+        this.#count++;
         
         // Attempt to parse the raw text as a valid JSON object
         let msg: DebugJsonMessage;
@@ -196,13 +208,19 @@ export class MicroController implements Controller {
             // ui.succeed('Updated microcontroller software successfully!');
           }
           if(this.passRevision === false) { break; }
-          onMessage(msg);
+          // onMessage([msg]); // Uncomment to pass revision messages to the rest of the app (unbatched)
           break;
         default:
-          onMessage(msg);
+          this.#batch.push(msg);
+          if(Date.now() - this.#lastBatch >= BATCH_INTERVAL) {
+            onMessage(this.#batch);
+            this.#batch = [];
+            this.#lastBatch = Date.now();
+          }
           break;
         }
 
+        
       });
     });
   }
@@ -217,7 +235,7 @@ export class MicroController implements Controller {
   /**
    * Refresh (or start) the serial timeout.
    */
-  private resetTimeout(cb?: (err: any) => void, timeoutSeconds: number = SERIAL_TIMEOUT_SECONDS): void {
+  private resetTimeout(cb?: (err?: Error) => void, timeoutSeconds: number = SERIAL_TIMEOUT_SECONDS): void {
     this.pauseTimeout(true);
     this.timeout = setTimeout(() => {
       ui.fail(
@@ -250,6 +268,8 @@ export class MicroController implements Controller {
     this.stop();
     // this.resetpin.writeSync(1);
 
+    this.#count = 0;
+
     // Wait, then stop resetting
     // await new Promise<void>((r) => setTimeout(r, 1000));
     // this.resetpin.writeSync(0);
@@ -266,11 +286,6 @@ export class MicroController implements Controller {
           reso();
         }
       });
-      setTimeout(() => {
-        // ui.fail('CONTROLLER ENOENT TIMEOUT');
-        this.stop();
-        reje(new DebugJsonSerialportError('ENOENT'));
-      }, 10000);
     });
 
     // Restart timeout
@@ -285,7 +300,7 @@ export class SimulatedController implements Controller {
 
   constructor(readonly parameters: SimulatorConfig) {}
 
-  async start(onMessage: (msg: DebugJsonMessage) => any): Promise<void> {
+  async start(onMessage: (msg: DebugJsonMessage) => void): Promise<void> {
     for (const label of Object.keys(this.parameters)) {
       this.intervals.push(
         setInterval(() => {
@@ -318,7 +333,7 @@ export class SimulatedController implements Controller {
     min: number,
     max: number
   ): DebugJsonMessage {
-		let d = (Math.random() * (max - min) + min);
+		const d = (Math.random() * (max - min) + min);
     return {
       type: 'event',
       data: {

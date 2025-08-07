@@ -10,10 +10,12 @@ import React, {
 } from 'react';
 import { io, Socket } from 'socket.io-client';
 
+const SOCKET_MESSAGES_MAX = 100;
+
 export type SocketContextType = {
   connected: boolean;
   socket: Socket | null;
-  sockets?: string[]; // List of connected sockets
+  sockets: string[]; // List of connected sockets
   messages: { [key: string]: object[] };
   // clearMessages?: (label: string) => void;
 };
@@ -21,7 +23,7 @@ export type SocketContextType = {
 const SocketContext = createContext<SocketContextType>({
   connected: false,
   socket: null,
-  sockets: undefined,
+  sockets: [],
   messages: {},
 });
 
@@ -33,22 +35,12 @@ export const useSocket = () => {
   return context;
 };
 
-export type DebugSocketProviderProps = PropsWithChildren<{
-  hostname?: string;
-  num?: number;
-}>;
+// const socket = io({ autoConnect: false });
+const socket = io();
 
-const _socket = io();
-
-const DebugSocketProvider: FC<DebugSocketProviderProps> = ({
-  children,
-  hostname,
-  num,
-}) => {
-  const [isConnected, setIsConnected] = useState(false);
+const DebugSocketProvider: FC<PropsWithChildren> = ({ children }) => {
+  const [isConnected, setIsConnected] = useState(socket.connected);
   const [sockets, setSockets] = useState<{ [key: string]: boolean }>({});
-  // const [_socket] = useState(hostname ? io(hostname) : io());
-  const [socket, _setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<{ [key: string]: object[] }>({});
 
   // const clearMessages = (label: string) => {
@@ -59,62 +51,61 @@ const DebugSocketProvider: FC<DebugSocketProviderProps> = ({
   // };
 
   useEffect(() => {
-    const addSocket = (sock: string): boolean => {
-      let r = false;
-      setSockets((prev) => {
-        r = prev[sock] ?? false;
-        const updatedSockets = { ...prev, [sock]: true };
-        return updatedSockets;
-      });
-      return r;
-    };
-
     const addMessage = (label: string, msg: object) => {
       setMessages((prev) => {
-        const updatedMessages = {
+        // console.log(prev);
+        return {
           ...prev,
-          [label]: [msg, ...(prev[label] ?? [])].slice(0, num ?? 1),
+          [label]: [msg, ...(prev[label] ?? [])].slice(0, SOCKET_MESSAGES_MAX),
         };
-        return updatedMessages;
       });
     };
 
-    function onJson(socketMsg: object & { _socket: string }) {
-      if (!addSocket(socketMsg._socket)) {
-        socket?.on(socketMsg._socket, (m) => {
-          console.log(m);
-          addMessage(socketMsg._socket, { ...m, _socket: undefined });
+    function onJson(socketMsg: object) {
+      // Subsocket handling
+      if (typeof socketMsg['_socket'] === 'string') {
+        setSockets((prev) => {
+          if (!prev[socketMsg['_socket']]) {
+            console.log(`New Socket: ${socketMsg['_socket']}`);
+          }
+          return { ...prev, [socketMsg['_socket']]: true };
         });
       }
+      addMessage('server', socketMsg);
     }
 
-    function onDisconnect(rsn: string) {
+    const onConnect = () => {
+      console.log(`Socket Connected: ${socket.id}`);
+      setIsConnected(true);
+      // socket.on('json', onJson);
+    };
+    const onDisconnect = (rsn: string) => {
       console.log(`Socket Disconnected: ${rsn}`);
       setIsConnected(false);
-      socket?.off('json', onJson);
-    }
+      // socket.off('json', onJson);
+      // setSockets({});
+      // setMessages({});
+    };
 
-    function onConnect() {
-      console.log(`Socket Connected: ${_socket.id}`);
-      setIsConnected(true);
-      _socket.off('connect', onConnect);
-      _socket.on('disconnect', onDisconnect);
-      socket?.on('json', onJson);
-    }
-    if (_socket.connected) {
-      onConnect();
-    } else {
-      _socket.on('connect', onConnect);
-    }
-
-    if (socket === null) _setSocket(_socket); // First-time; will trigger a re-render
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('json', onJson);
+    Object.entries(sockets).forEach((s) => {
+      if (s[1]) {
+        socket.on(s[0], (msg: object) => {
+          addMessage(s[0], msg);
+        });
+      }
+    });
 
     return () => {
-      // _socket.off('connect', onConnect);
-      _socket.off('disconnect', onDisconnect);
-      socket?.off('json', onJson);
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('json', onJson);
+      Object.keys(sockets).forEach((s) => socket.removeAllListeners(s));
     };
-  }, [hostname, isConnected, socket, num]);
+  });
+  // }, [sockets]);
 
   const listSockets = (): string[] =>
     Object.entries(sockets).reduce((arr, s) => {
@@ -128,8 +119,8 @@ const DebugSocketProvider: FC<DebugSocketProviderProps> = ({
     <SocketContext.Provider
       value={{
         connected: isConnected,
-        socket,
-        sockets: isConnected ? listSockets() : undefined,
+        socket: isConnected ? socket : null,
+        sockets: isConnected ? listSockets() : [],
         messages,
       }}
     >

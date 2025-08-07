@@ -6,7 +6,8 @@ export type DebugJsonMessageTypes =
   | 'event'
   | 'command'
   | 'config'
-  | 'revision';
+  | 'revision'
+  | 'tree';
 
 export type DebugJsonMessage = {
   type: DebugJsonMessageTypes; // * Required; Usually first in a stream
