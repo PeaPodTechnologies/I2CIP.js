@@ -59,7 +59,7 @@ const SerialInput: FC<SerialInputProps> = () => {
           setInputString(event.target.value);
         }}
       />
-      <Box sx={{ m: 1 }}>
+      <Box sx={{ m: 1, marginTop: 2 }}>
         <Button
           variant="contained"
           disabled={inputError || !socket}

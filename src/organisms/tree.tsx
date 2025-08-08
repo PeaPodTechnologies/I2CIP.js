@@ -1,8 +1,18 @@
 'use client';
 
-import { FC } from 'react';
-import { List, ListItem, ListItemText, Paper } from '@mui/material';
+import { FC, useState } from 'react';
+import {
+  Box,
+  Button,
+  Checkbox,
+  List,
+  ListItem,
+  ListItemText,
+  Paper,
+  Typography,
+} from '@mui/material';
 import { useDevices } from '../contexts/devices';
+import { useSocket } from '../contexts/socket';
 
 // export type DeviceTreeProps = {
 //   socket?: string;
@@ -12,11 +22,13 @@ import { useDevices } from '../contexts/devices';
 
 const DeviceTree: FC = () => {
   const { devices } = useDevices();
+  const { socket } = useSocket();
+  const [rebuild, setRebuild] = useState(false);
 
   return (
     //devices ? (
     <Paper elevation={3} square={false} sx={{ padding: 2 }}>
-      <div>Device Tree Placeholder</div>
+      <Typography variant="h6">Device Tree</Typography>
       {Array.isArray(devices) && devices.length > 0 ? (
         <List>
           {devices.map((m) =>
@@ -28,8 +40,29 @@ const DeviceTree: FC = () => {
           )}
         </List>
       ) : (
-        <div>No devices found</div>
+        <Typography variant="subtitle1">No devices found</Typography>
       )}
+      <Box sx={{ m: 1, marginTop: 2 }}>
+        Rebuild?
+        <Checkbox
+          checked={rebuild}
+          onChange={(e) => setRebuild(e.target.checked)}
+        />
+        <Button
+          variant="contained"
+          disabled={!socket}
+          onClick={() => {
+            if (socket) {
+              socket.emit('serialinput', {
+                type: 'command',
+                data: { rebuild: true },
+              });
+            }
+          }}
+        >
+          Send
+        </Button>
+      </Box>
     </Paper>
   ); // : null;
 };

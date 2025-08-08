@@ -10,6 +10,8 @@ import {
   MenuItem,
   Select,
   Paper,
+  Box,
+  Typography,
 } from '@mui/material';
 import SerialInput from '../molecules/serial';
 // import { DebugJsonMessage } from '$/types';
@@ -62,7 +64,7 @@ const DebugMessageBoard: FC<DebugMessageBoardProps> = (props) => {
 
   return sock ? (
     <Paper elevation={3} square={false} sx={{ padding: 2 }}>
-      <h2>{`DEBUG SOCKET '${sock}'`}</h2>
+      <Typography variant="h6">{`Debug Socket '${sock}'`}</Typography>
       <DebugSocketMessages
         key={`debug-socket-${sock}`}
         label={sock}
@@ -78,17 +80,19 @@ const DebugMessageBoard: FC<DebugMessageBoardProps> = (props) => {
         >
           Flash Controller
         </a> */}
-      <Button
-        fullWidth
-        // className="rounded-xl border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-        variant="outlined"
-        color="primary"
-        size="small"
-        onClick={() => setShowJson(!showJson)}
-      >
-        {showJson ? 'Show Debug' : 'Show JSON'}
-      </Button>
-      <FormControl fullWidth>
+      <Box sx={{ m: 1 }}>
+        <Button
+          fullWidth
+          // className="rounded-xl border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
+          variant="outlined"
+          color="primary"
+          size="small"
+          onClick={() => setShowJson(!showJson)}
+        >
+          {showJson ? 'Show Debug' : 'Show JSON'}
+        </Button>
+      </Box>
+      <FormControl fullWidth sx={{ m: 1 }}>
         <InputLabel id="messageboard-numdata-select-label">Messages</InputLabel>
         <Select
           labelId="messageboard-numdata-select-label"
