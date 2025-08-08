@@ -13,7 +13,8 @@ import { useDevices } from '../contexts/devices';
 const DeviceTree: FC = () => {
   const { devices } = useDevices();
 
-  return devices ? (
+  return (
+    //devices ? (
     <Paper elevation={3} square={false} sx={{ padding: 2 }}>
       <div>Device Tree Placeholder</div>
       {Array.isArray(devices) && devices.length > 0 ? (
@@ -30,7 +31,7 @@ const DeviceTree: FC = () => {
         <div>No devices found</div>
       )}
     </Paper>
-  ) : null;
+  ); // : null;
 };
 
 export default DeviceTree;

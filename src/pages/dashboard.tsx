@@ -6,6 +6,7 @@ import { useSocket } from '../contexts/socket';
 import DebugMessageBoard from '../organisms/board';
 import DeviceTree from '../organisms/tree';
 import Pinger from '../organisms/ping';
+import DeviceGrids from '../organisms/devicegrids';
 
 const Dashboard: FC<PropsWithChildren> = ({ children }) => {
   const { connected, sockets } = useSocket();
@@ -38,6 +39,7 @@ const Dashboard: FC<PropsWithChildren> = ({ children }) => {
       <Grid size={{ xs: 4, md: 4 }}>
         <Pinger />
       </Grid>
+      <DeviceGrids />
     </Grid>
   ) : (
     <CircularProgress />
