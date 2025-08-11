@@ -48,6 +48,7 @@ const TelemetryGrid: FC<{
           height={300}
           xAxis={[
             {
+              label: 'Time Elapsed (s)',
               data: data.map((point) => point.x / 1000),
             },
           ]}
@@ -56,9 +57,8 @@ const TelemetryGrid: FC<{
               data: data.map((point) => point.y),
             },
           ]}
-          xAxisLabel={'Time Elapsed (s)'}
-          yAxisLabel={label}
-          tooltip={{ enabled: true }}
+          grid={{ vertical: true, horizontal: true }}
+          skipAnimation
           legend={{ enabled: true }}
         />
       </Paper>

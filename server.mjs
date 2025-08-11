@@ -125,11 +125,13 @@ const ipv4Lookup = async () => {
                     socket.emit('server', {type: 'error', msg: 'Controller Input Error: Invalid Data'});
                     return;
                   }
-                  microcontroller.write({type: data.type, data: data.data}).catch((err) => {
+                  try {
+                    microcontroller.write({type: data.type, data: data.data});
+                  } catch (err) {
                     ui.fail(`CONTROLLER INPUT ERROR: ${err}`);
 
                     socket.emit('server', {type: 'error', msg: `Controller TX Error: ${err}`});
-                  });
+                  }
                 });
 
                 socket.on('scheduler-post', (data) => {
@@ -144,14 +146,16 @@ const ipv4Lookup = async () => {
                     ui.info(`CONTROLLER INPUT SCHEDULE CLEARED: ${schedulerLabel}`);
                     clearInterval(schedule[schedulerLabel]);
                   }
-                  if(typeof data.interval === 'number' && data.interval >= 1000) {
+                  if(typeof data.interval === 'number' && data.interval >= 100) {
                     ui.info(`CONTROLLER INPUT SCHEDULE: ${schedulerLabel} @${data.interval}ms`);
                     schedule[schedulerLabel] = setInterval(() => {
                       ui.info(`CONTROLLER INPUT SCHEDULE: ${schedulerLabel} @${data.interval}ms`);
-                      microcontroller.write({type: data.instruction.type, data: data.instruction.data}).catch((err) => {
+                      try {
+                        microcontroller.write({type: data.instruction.type, data: data.instruction.data});
+                      } catch (err) {
                         ui.fail(`CONTROLLER INPUT ERROR: ${err}`);
                         socket.emit('server', {type: 'error', msg: `Controller TX Error: ${err}`});
-                      });
+                      }
                     }, data.interval);
                   }
                 });

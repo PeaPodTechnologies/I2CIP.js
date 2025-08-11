@@ -44,7 +44,7 @@ const DeviceGrid: FC<{ device: { [key in DeviceID]: number } }> = ({
         b: DEVICE_ARG_PARSE_B[deviceId](argsB) || undefined,
       },
     };
-    if (isInterval && interval > 1) {
+    if (isInterval && interval > 0.1) {
       socket.emit('scheduler-post', {
         interval: interval * 1000,
         instruction,
@@ -64,7 +64,7 @@ const DeviceGrid: FC<{ device: { [key in DeviceID]: number } }> = ({
         a: DEVICE_ARG_PARSE_A[deviceId](argsA) || undefined,
       },
     };
-    if (isInterval && interval > 1) {
+    if (isInterval && interval > 0.1) {
       socket.emit('scheduler-post', {
         interval: interval * 1000,
         instruction,
