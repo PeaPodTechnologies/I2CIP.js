@@ -7,12 +7,12 @@ import DebugMessageBoard from '../organisms/board';
 import DeviceTree from '../organisms/tree';
 import Pinger from '../organisms/ping';
 import DeviceGrids from '../organisms/devicegrids';
+import Scheduler from '../organisms/scheduler';
+import TelemetryProvider from '../contexts/telemetry';
+import TelemetryGrids from '../organisms/telemetrygrids';
 
 const Dashboard: FC<PropsWithChildren> = ({ children }) => {
   const { connected, sockets } = useSocket();
-
-  console.log(connected);
-  console.log(sockets);
 
   return connected && sockets.length > 0 ? (
     <Grid
@@ -40,6 +40,9 @@ const Dashboard: FC<PropsWithChildren> = ({ children }) => {
         <Pinger />
       </Grid>
       <DeviceGrids />
+      <TelemetryProvider sock="microcontroller">
+        <TelemetryGrids />
+      </TelemetryProvider>
     </Grid>
   ) : (
     <CircularProgress />

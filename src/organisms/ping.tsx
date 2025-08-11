@@ -26,7 +26,7 @@ const Pinger: FC = () => {
             Object.entries(m).map(([id, fqas]) =>
               fqas && Array.isArray(fqas) ? (
                 <>
-                  <ListItem key={id}>
+                  <ListItem key={`${id}-${m}`}>
                     <ListItemText primary={id} />
                   </ListItem>
                   {fqas.map((fqa) => (

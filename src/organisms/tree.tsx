@@ -9,6 +9,7 @@ import {
   ListItem,
   ListItemText,
   Paper,
+  TextField,
   Typography,
 } from '@mui/material';
 import { useDevices } from '../contexts/devices';
@@ -24,6 +25,26 @@ const DeviceTree: FC = () => {
   const { devices } = useDevices();
   const { socket } = useSocket();
   const [rebuild, setRebuild] = useState(false);
+
+  const [isInterval, setIsInterval] = useState<boolean>(false);
+  const [interval, _setInterval] = useState<number>(0);
+
+  const handleRebuild = () => {
+    const instruction = {
+      type: 'command',
+      data: {
+        rebuild,
+      },
+    };
+    if (isInterval && interval > 1) {
+      socket.emit('scheduler-post', {
+        interval: interval * 1000,
+        instruction,
+      });
+    } else {
+      socket.emit('serialinput', instruction);
+    }
+  };
 
   return (
     //devices ? (
@@ -42,24 +63,40 @@ const DeviceTree: FC = () => {
       ) : (
         <Typography variant="subtitle1">No devices found</Typography>
       )}
-      <Box sx={{ m: 1, marginTop: 2 }}>
-        Rebuild?
+      <Box
+        component="form"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          flexDirection: 'row',
+          '& .MuiTextField-root': { m: 1, width: '25ch' },
+        }}
+        noValidate
+        autoComplete="off"
+        onSubmit={(e) => {
+          e.preventDefault(); // Prevents page refresh
+        }}
+      >
+        <Typography>Rebuild?</Typography>
         <Checkbox
           checked={rebuild}
           onChange={(e) => setRebuild(e.target.checked)}
         />
-        <Button
-          variant="contained"
-          disabled={!socket}
-          onClick={() => {
-            if (socket) {
-              socket.emit('serialinput', {
-                type: 'command',
-                data: { rebuild: true },
-              });
-            }
-          }}
-        >
+        <Typography>Schedule?</Typography>
+        <Checkbox
+          checked={isInterval}
+          onChange={(e) => setIsInterval(e.target.checked)}
+        />
+        {isInterval ? (
+          <TextField
+            label="Interval (Seconds)"
+            type="number"
+            value={interval ?? ''}
+            error={interval <= 0}
+            onChange={(e) => _setInterval(Number(e.target.value))}
+          />
+        ) : null}
+        <Button variant="contained" disabled={!socket} onClick={handleRebuild}>
           Send
         </Button>
       </Box>

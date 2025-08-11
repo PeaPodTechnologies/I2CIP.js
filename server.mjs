@@ -10,6 +10,7 @@ import nextConfig from './next.config.mjs';
 import { findSerialPort, MicroController, CONTROLLER_REVISION } from './api/controller.mjs';
 // import { pushDebugMessage, pushDebugMessages } from './api/firebase.mjs';
 import ui, { _logRedirect, _errRedirect } from './api/ui.mjs';
+import {DebugJsonSerialportError} from './api/errors.mjs';
 
 // Redirect console.log/.error calls to ui.log/.err
 console.log = _logRedirect;
@@ -100,7 +101,9 @@ const ipv4Lookup = async () => {
               // io.off('connection', handleSocketConnection);
               microcontroller.reset();
             }).then(() => {
-              ui.succeed(`Using DebugJSON: https://${ host }:${ port }/microcontroller/`);
+              ui.succeed(`I2CIP.js Ready!`);
+
+              var schedule = {};
 
               // 6. Socket.IO Connection Handler
               io.on('connection', (socket) => {
@@ -117,11 +120,45 @@ const ipv4Lookup = async () => {
                 });
                 socket.on('serialinput', (data) => {
                   ui.info(`CONTROLLER INPUT: ${JSON.stringify(data)}`);
-                  microcontroller.write(data).catch((err) => {
+                  if(!data || !data.type || !data.data) {
+                    ui.fail('CONTROLLER INPUT ERROR: Invalid Data');
+                    socket.emit('server', {type: 'error', msg: 'Controller Input Error: Invalid Data'});
+                    return;
+                  }
+                  microcontroller.write({type: data.type, data: data.data}).catch((err) => {
                     ui.fail(`CONTROLLER INPUT ERROR: ${err}`);
 
                     socket.emit('server', {type: 'error', msg: `Controller TX Error: ${err}`});
                   });
+                });
+
+                socket.on('scheduler-post', (data) => {
+                  ui.info(`SCHEDULER POST: ${JSON.stringify(data)}`);
+                  if(!data || !data.interval || !data.instruction || !data.instruction.type || !data.instruction.data) {
+                    ui.fail('SCHEDULER POST ERROR: Invalid Data');
+                    socket.emit('server', {type: 'error', msg: 'Scheduler Post Error: Invalid Data'});
+                    return;
+                  }
+                  const schedulerLabel = JSON.stringify(data.instruction);
+                  if(schedule[schedulerLabel]) {
+                    ui.info(`CONTROLLER INPUT SCHEDULE CLEARED: ${schedulerLabel}`);
+                    clearInterval(schedule[schedulerLabel]);
+                  }
+                  if(typeof data.interval === 'number' && data.interval >= 1000) {
+                    ui.info(`CONTROLLER INPUT SCHEDULE: ${schedulerLabel} @${data.interval}ms`);
+                    schedule[schedulerLabel] = setInterval(() => {
+                      ui.info(`CONTROLLER INPUT SCHEDULE: ${schedulerLabel} @${data.interval}ms`);
+                      microcontroller.write({type: data.instruction.type, data: data.instruction.data}).catch((err) => {
+                        ui.fail(`CONTROLLER INPUT ERROR: ${err}`);
+                        socket.emit('server', {type: 'error', msg: `Controller TX Error: ${err}`});
+                      });
+                    }, data.interval);
+                  }
+                });
+
+                socket.on('scheduler', (data) => {
+                  ui.info(`SCHEDULER INPUT: ${JSON.stringify(data)}`);
+                  
                 });
               });
             });

@@ -226,14 +226,14 @@ class DebugJsonUI {
    *
    * @param text Text to log
    */
-  log(args: unknown) {
+  log(...args: unknown[]) {
     if (this.spinning()) {
       const oldtext = this.spinner.text;
       this.spinner.stop(); // stop spinner
-      this._log(args); // log text
+      this._log(...args); // log text
       this.spinner.start(oldtext); // restart spinner
     } else {
-      this._log(args); // log text
+      this._log(...args); // log text
     }
   }
 
@@ -243,14 +243,14 @@ class DebugJsonUI {
    *
    * @param text Text to log
    */
-  err(args: unknown) {
+  err(...args: unknown[]) {
     if (this.spinning()) {
       const oldtext = this.spinner.text;
       this.spinner.stop(); // stop spinner
-      this._err(args); // log text
+      this._err(...args); // log text
       this.spinner.start(oldtext); // restart spinner
     } else {
-      this._err(args); // log text
+      this._err(...args); // log text
     }
   }
 }
@@ -260,12 +260,12 @@ export default DebugJsonConsole;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function _logRedirect(...message: any[]): void { 
-  DebugJsonConsole.log(message);
+  DebugJsonConsole.log(...message);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function _errRedirect(...message: any[]): void { 
-  DebugJsonConsole.err(message);
+  DebugJsonConsole.err(...message);
 }
 
 // // Use yargs to get a flag "--spawn"

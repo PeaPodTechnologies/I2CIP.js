@@ -1,6 +1,14 @@
 import { FC, useState } from 'react';
 import { useDevices } from '../contexts/devices';
-import { Box, Button, Grid, Paper, TextField } from '@mui/material';
+import {
+  Box,
+  Button,
+  Checkbox,
+  Grid,
+  Paper,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { useSocket } from '../contexts/socket';
 import { fqaToString } from '../utils';
 import {
@@ -21,8 +29,50 @@ const DeviceGrid: FC<{ device: { [key in DeviceID]: number } }> = ({
   const [argsS, setArgsS] = useState<string>('');
   const [argsB, setArgsB] = useState<string>('');
 
+  const [interval, _setInterval] = useState<number>(0);
+  const [isInterval, setIsInterval] = useState<boolean>(false);
+
   const deviceId = Object.keys(device)[0] as DeviceID;
   const fqa = Object.values(device)[0];
+
+  const handleSet = () => {
+    const instruction = {
+      type: 'command',
+      data: {
+        fqa,
+        s: DEVICE_ARG_PARSE_S[deviceId](argsS) || undefined,
+        b: DEVICE_ARG_PARSE_B[deviceId](argsB) || undefined,
+      },
+    };
+    if (isInterval && interval > 1) {
+      socket.emit('scheduler-post', {
+        interval: interval * 1000,
+        instruction,
+      });
+    } else {
+      socket.emit('serialinput', instruction);
+    }
+  };
+
+  const handleGet = () => {
+    console.log(`Scheduler: ${isInterval}, Interval: ${interval}`);
+    const instruction = {
+      type: 'command',
+      data: {
+        fqa,
+        g: true,
+        a: DEVICE_ARG_PARSE_A[deviceId](argsA) || undefined,
+      },
+    };
+    if (isInterval && interval > 1) {
+      socket.emit('scheduler-post', {
+        interval: interval * 1000,
+        instruction,
+      });
+    } else {
+      socket.emit('serialinput', instruction);
+    }
+  };
 
   return (
     <Grid key={`grid-${deviceId}-${fqa}`} size={{ xs: 4, md: 4 }}>
@@ -82,18 +132,11 @@ const DeviceGrid: FC<{ device: { [key in DeviceID]: number } }> = ({
             variant="contained"
             disabled={
               !DEVICE_ARG_HAS[deviceId].s ||
-              !DEVICE_ARG_TYPES_SET[deviceId](argsS, argsB)
+              !DEVICE_ARG_TYPES_SET[deviceId](argsS, argsB) ||
+              !socket ||
+              (isInterval && interval <= 0)
             }
-            onClick={() => {
-              socket.emit('serialinput', {
-                type: 'command',
-                data: {
-                  fqa,
-                  s: DEVICE_ARG_PARSE_S[deviceId](argsS) || undefined,
-                  b: DEVICE_ARG_PARSE_B[deviceId](argsB) || undefined,
-                },
-              });
-            }}
+            onClick={handleSet}
           >
             Set
           </Button>
@@ -127,22 +170,44 @@ const DeviceGrid: FC<{ device: { [key in DeviceID]: number } }> = ({
             variant="contained"
             disabled={
               !DEVICE_ARG_HAS[deviceId].g ||
-              !DEVICE_ARG_TYPES_GET[deviceId](argsA)
+              !DEVICE_ARG_TYPES_GET[deviceId](argsA) ||
+              !socket ||
+              (isInterval && interval <= 0)
             }
-            onClick={() => {
-              socket.emit('serialinput', {
-                type: 'command',
-                data: {
-                  fqa,
-                  g: true,
-                  a: DEVICE_ARG_PARSE_A[deviceId](argsA) || undefined,
-                },
-              });
-            }}
+            onClick={handleGet}
           >
             Get
           </Button>
         ) : null}
+        <Box
+          component="form"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            flexDirection: 'row',
+            '& .MuiTextField-root': { m: 1, width: '25ch' },
+          }}
+          noValidate
+          autoComplete="off"
+          onSubmit={(e) => {
+            e.preventDefault(); // Prevents page refresh
+          }}
+        >
+          <Typography>Schedule?</Typography>
+          <Checkbox
+            checked={isInterval}
+            onChange={(e) => setIsInterval(e.target.checked)}
+          />
+          {isInterval ? (
+            <TextField
+              label="Interval (Seconds)"
+              type="number"
+              value={interval ?? ''}
+              error={interval <= 0}
+              onChange={(e) => _setInterval(Number(e.target.value))}
+            />
+          ) : null}
+        </Box>
       </Paper>
     </Grid>
   );
