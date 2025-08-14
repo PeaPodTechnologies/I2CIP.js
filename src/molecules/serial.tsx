@@ -1,6 +1,6 @@
 import { Box, Button, TextField } from '@mui/material';
 import { FC, useEffect, useState } from 'react';
-import { useSocket } from '../contexts/socket';
+import { useSocket } from '@/contexts/socket';
 
 type SerialInputProps = {
   socket?: string;

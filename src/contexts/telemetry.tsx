@@ -15,7 +15,7 @@ type TelemetryType = {
 };
 
 type TelemetryContextType = {
-  telemetry: TelemetryType | null;
+  telemetry: TelemetryType;
 };
 
 const TelemetryContext = createContext<TelemetryContextType>({
@@ -29,7 +29,7 @@ const TelemetryProvider = ({
   children: ReactNode;
   sock: string;
 }) => {
-  const [telemetry, setTelemetry] = useState<TelemetryType | null>(null);
+  const [telemetry, setTelemetry] = useState<TelemetryType>({});
 
   const { messages } = useSocket();
 
@@ -37,7 +37,14 @@ const TelemetryProvider = ({
     if (messages && messages[sock]) {
       setTelemetry(
         messages[sock]
-          .filter((msg) => msg['type'] === 'event')
+          .filter(
+            (msg) =>
+              msg['type'] === 'event' &&
+              msg['data'] &&
+              Object.values(msg['data']).every(
+                (datum) => typeof datum === 'number'
+              )
+          )
           .reduce((acc, _msg) => {
             const msg = _msg as {
               timestamp: number;

@@ -12,8 +12,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useDevices } from '../contexts/devices';
-import { useSocket } from '../contexts/socket';
+import { useDevices } from '@/contexts/devices';
+import { useSocket } from '@/contexts/socket';
 
 // export type DeviceTreeProps = {
 //   socket?: string;

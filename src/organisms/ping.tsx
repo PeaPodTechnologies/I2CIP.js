@@ -1,7 +1,14 @@
-import { Paper, List, ListItem, ListItemText, Button } from '@mui/material';
+import {
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  Button,
+  Typography,
+} from '@mui/material';
 import { FC } from 'react';
-import { useDevices } from '../contexts/devices';
-import { useSocket } from '../contexts/socket';
+import { useDevices } from '@/contexts/devices';
+import { useSocket } from '@/contexts/socket';
 import { fqaToString } from '../utils';
 
 const Pinger: FC = () => {
@@ -19,7 +26,7 @@ const Pinger: FC = () => {
 
   return devices ? (
     <Paper elevation={3} square={false} sx={{ padding: 2 }}>
-      <div>Pinger Placeholder</div>
+      <Typography variant="h6">Device Ping</Typography>
       {Array.isArray(devices) && devices.length > 0 ? (
         <List>
           {devices.map((m) =>

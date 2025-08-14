@@ -1,8 +1,8 @@
 'use client';
 
 import React, { FC, useState, useEffect } from 'react';
-import DebugSocketMessages from '../molecules/messages';
-import { useSocket } from '../contexts/socket';
+import DebugSocketMessages from '@/molecules/messages';
+import { useSocket } from '@/contexts/socket';
 import {
   Button,
   FormControl,
@@ -13,7 +13,7 @@ import {
   Box,
   Typography,
 } from '@mui/material';
-import SerialInput from '../molecules/serial';
+import SerialInput from '@/molecules/serial';
 // import { DebugJsonMessage } from '$/types';
 
 const DEBUGJSON_NUM_DATA_OPTIONS = [10, 25, 50, 100];

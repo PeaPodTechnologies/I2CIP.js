@@ -7,8 +7,8 @@ import React, {
   // useState,
   // useCallback
 } from 'react';
-import { useSocket } from '../contexts/socket';
-import DebugMessage from '../atoms/message';
+import { useSocket } from '@/contexts/socket';
+import DebugMessage from '@/atoms/message';
 import { List, ListItem } from '@mui/material';
 
 export type DebugJsonMessageDataType = {

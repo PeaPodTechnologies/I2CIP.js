@@ -6,26 +6,35 @@ import React, {
   useEffect,
 } from 'react';
 import { useSocket } from './socket';
+import { DeviceID } from '../devicetypes';
 
 type DeviceTree = {
-  [key: string]: number[];
+  [key in DeviceID]?: number[];
 }[];
 
 type DevicesContextType = {
-  devices: DeviceTree | null;
+  devices: DeviceTree;
+  devicesFlat: [DeviceID, number][];
 };
 
 const DevicesContext = createContext<DevicesContextType>({
-  devices: null,
+  devices: [],
+  devicesFlat: [],
 });
 
-const DevicesProvider = ({ children }: { children: ReactNode }) => {
-  const [devices, setDevices] = useState<DeviceTree | null>(null);
+const DevicesProvider = ({
+  children,
+  sock,
+}: {
+  children: ReactNode;
+  sock?: string;
+}) => {
+  const [devices, setDevices] = useState<DeviceTree>([]);
 
   const { messages } = useSocket();
 
-  const tree = messages['microcontroller']
-    ? messages['microcontroller'].find((msg) => msg['type'] == 'tree')
+  const tree = messages[sock ?? 'microcontroller']
+    ? messages[sock ?? 'microcontroller'].find((msg) => msg['type'] == 'tree')
     : null;
 
   useEffect(() => {
@@ -34,8 +43,20 @@ const DevicesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [tree, messages]);
 
+  const devicesFlat = devices.reduce(
+    (flat, m) => {
+      Object.entries(m).forEach(([id, fqas]) => {
+        fqas.forEach((fqa) => {
+          flat.push([id as DeviceID, fqa]);
+        });
+      });
+      return flat;
+    },
+    [] as [DeviceID, number][]
+  );
+
   return (
-    <DevicesContext.Provider value={{ devices }}>
+    <DevicesContext.Provider value={{ devices, devicesFlat }}>
       {children}
     </DevicesContext.Provider>
   );
