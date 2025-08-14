@@ -1,11 +1,6 @@
 import { Ora, Spinner } from 'ora';
 import ora from 'ora';
-import * as blessed from 'blessed';
-import { DebugJsonMessage } from './types';
-import { parseDatum, parseType } from './utils';
-
-// Import Yargs
-import yargs from 'yargs';
+// import * as blessed from 'blessed';
 
 const DEBUGJSON_DEFAULT_SPINNER: Spinner = {
   interval: 50,
@@ -146,7 +141,9 @@ const DEBUGJSON_DEFAULT_SPINNER: Spinner = {
 // class DebugJsonUI extends ConsoleStream {
 class DebugJsonUI {
   spinner: Ora = this.reset();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _log: (...args: any[]) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _err: (...args: any[]) => void;
   constructor(con: Console = console) {
     // super(con);
@@ -229,14 +226,14 @@ class DebugJsonUI {
    *
    * @param text Text to log
    */
-  log(args: any) {
+  log(...args: unknown[]) {
     if (this.spinning()) {
-      let oldtext = this.spinner.text;
+      const oldtext = this.spinner.text;
       this.spinner.stop(); // stop spinner
-      this._log(args); // log text
+      this._log(...args); // log text
       this.spinner.start(oldtext); // restart spinner
     } else {
-      this._log(args); // log text
+      this._log(...args); // log text
     }
   }
 
@@ -246,14 +243,14 @@ class DebugJsonUI {
    *
    * @param text Text to log
    */
-  err(args: any) {
+  err(...args: unknown[]) {
     if (this.spinning()) {
-      let oldtext = this.spinner.text;
+      const oldtext = this.spinner.text;
       this.spinner.stop(); // stop spinner
-      this._err(args); // log text
+      this._err(...args); // log text
       this.spinner.start(oldtext); // restart spinner
     } else {
-      this._err(args); // log text
+      this._err(...args); // log text
     }
   }
 }
@@ -261,12 +258,14 @@ class DebugJsonUI {
 export const DebugJsonConsole = new DebugJsonUI();
 export default DebugJsonConsole;
 
-export function _logRedirect(message?: any): void { 
-  DebugJsonConsole.log(message);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function _logRedirect(...message: any[]): void { 
+  DebugJsonConsole.log(...message);
 }
 
-export function _errRedirect(message?: any): void { 
-  DebugJsonConsole.err(message);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function _errRedirect(...message: any[]): void { 
+  DebugJsonConsole.err(...message);
 }
 
 // // Use yargs to get a flag "--spawn"

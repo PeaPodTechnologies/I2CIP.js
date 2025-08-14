@@ -1,14 +1,20 @@
 'use client';
 
-import DebugMessageBoard from '../organisms/board';
 import React, { FC } from 'react';
 import DebugSocketProvider from '@/contexts/socket';
+import Dashboard from '../pages/dashboard';
+import DevicesProvider from '@/contexts/devices';
+import TelemetryProvider from '@/contexts/telemetry';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const Home: FC = (props) => {
   return (
     <DebugSocketProvider>
-      <DebugMessageBoard num={10} />
+      <DevicesProvider sock="microcontroller">
+        <TelemetryProvider sock="microcontroller">
+          <Dashboard />
+        </TelemetryProvider>
+      </DevicesProvider>
     </DebugSocketProvider>
   );
 };
