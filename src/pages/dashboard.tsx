@@ -10,13 +10,14 @@ import Device from '@/organisms/device';
 import { useTelemetry } from '@/contexts/telemetry';
 import TelemetryChart from '@/organisms/telemetrychart';
 import { useDevices } from '@/contexts/devices';
+import MessageDataGrid from '@/organisms/datagrid';
 
 const Dashboard: FC<PropsWithChildren> = ({ children }) => {
   const { connected, sockets } = useSocket();
   const { devicesFlat } = useDevices();
   const { telemetry } = useTelemetry();
 
-  return connected && sockets.length > 0 ? (
+  return connected ? (
     <Grid
       container
       spacing={3}
@@ -41,6 +42,9 @@ const Dashboard: FC<PropsWithChildren> = ({ children }) => {
           />
         </Grid>
       ))}
+      <Grid size={{ xs: 12, md: 8 }}>
+        <MessageDataGrid socket="microcontroller" />
+      </Grid>
       <Grid size={{ xs: 12, md: 4 }}>
         <DeviceTree />
       </Grid>

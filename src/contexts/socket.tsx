@@ -87,6 +87,8 @@ const DebugSocketProvider: FC<PropsWithChildren> = ({ children }) => {
       // setMessages({});
     };
 
+    setIsConnected(socket.connected);
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('json', onJson);
