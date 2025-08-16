@@ -1,5 +1,6 @@
 import { FC, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
@@ -33,7 +34,9 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
   const [isInterval, setIsInterval] = useState<boolean>(false);
 
   const [snackbar, setSnackbar] = useState<boolean>(false);
-  
+  const [errorSnackbar, setErrorSnackbar] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
   const closeSnackbar = (
     event: React.SyntheticEvent | Event,
     reason?: SnackbarCloseReason
@@ -43,6 +46,26 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
     }
 
     setSnackbar(false);
+  };
+
+  const closeErrorSnackbar = (
+    event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason
+  ) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setErrorSnackbar(false);
+  };
+
+  const handleResponse = ({ error }) => {
+    if (error) {
+      setErrorMessage(error);
+      setErrorSnackbar(true);
+    } else {
+      setSnackbar(true);
+    }
   };
 
   const handleSet = () => {
@@ -55,12 +78,16 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
       },
     };
     if (isInterval && interval > 0.1) {
-      socket.emit('scheduler-post', {
-        interval: interval * 1000,
-        instruction,
-      }, () => setSnackbar(true));
+      socket.emit(
+        'scheduler-post',
+        {
+          interval: interval * 1000,
+          instruction,
+        },
+        handleResponse
+      );
     } else {
-      socket.emit('serialinput', instruction, () => setSnackbar(true));
+      socket.emit('serialinput', instruction, handleResponse);
     }
   };
 
@@ -75,12 +102,16 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
       },
     };
     if (isInterval && interval > 0.1) {
-      socket.emit('scheduler-post', {
-        interval: interval * 1000,
-        instruction,
-      }, () => setSnackbar(true));
+      socket.emit(
+        'scheduler-post',
+        {
+          interval: interval * 1000,
+          instruction,
+        },
+        handleResponse
+      );
     } else {
-      socket.emit('serialinput', instruction, () => setSnackbar(true));
+      socket.emit('serialinput', instruction, handleResponse);
     }
   };
 
@@ -217,22 +248,30 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
           />
         ) : null}
       </Box>
+      <Snackbar open={snackbar} autoHideDuration={6000} onClose={closeSnackbar}>
+        <Alert
+          onClose={closeSnackbar}
+          severity="success"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          Serial input received successfully!
+        </Alert>
+      </Snackbar>
       <Snackbar
-        open={snackbar}
+        open={errorSnackbar}
         autoHideDuration={6000}
-        onClose={closeSnackbar}
-        message="Serial input received"
-        action={
-          <IconButton
-            size="small"
-            aria-label="close"
-            color="inherit"
-            onClick={closeSnackbar}
-          >
-            <Close fontSize="small" />
-          </IconButton>
-        }
-      />
+        onClose={closeErrorSnackbar}
+      >
+        <Alert
+          onClose={closeErrorSnackbar}
+          severity="error"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {errorMessage || 'An error occurred while sending serial input.'}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

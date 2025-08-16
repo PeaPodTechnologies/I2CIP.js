@@ -2,10 +2,10 @@
 
 import { FC, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
-  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -17,7 +17,6 @@ import {
 } from '@mui/material';
 import { useDevices } from '@/contexts/devices';
 import { useSocket } from '@/contexts/socket';
-import { Close } from '@mui/icons-material';
 
 // export type DeviceTreeProps = {
 //   socket?: string;
@@ -34,6 +33,8 @@ const DeviceTree: FC = () => {
   const [interval, _setInterval] = useState<number>(0);
 
   const [snackbar, setSnackbar] = useState<boolean>(false);
+  const [errorSnackbar, setErrorSnackbar] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const closeSnackbar = (
     event: React.SyntheticEvent | Event,
@@ -44,6 +45,26 @@ const DeviceTree: FC = () => {
     }
 
     setSnackbar(false);
+  };
+
+  const closeErrorSnackbar = (
+    event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason
+  ) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setErrorSnackbar(false);
+  };
+
+  const handleResponse = ({ error }) => {
+    if (error) {
+      setErrorMessage(error);
+      setErrorSnackbar(true);
+    } else {
+      setSnackbar(true);
+    }
   };
 
   const handleRebuild = () => {
@@ -60,10 +81,10 @@ const DeviceTree: FC = () => {
           interval: interval * 1000,
           instruction,
         },
-        () => setSnackbar(true)
+        handleResponse
       );
     } else {
-      socket.emit('serialinput', instruction, () => setSnackbar(true));
+      socket.emit('serialinput', instruction, handleResponse);
     }
   };
 
@@ -121,22 +142,30 @@ const DeviceTree: FC = () => {
           Send
         </Button>
       </Box>
+      <Snackbar open={snackbar} autoHideDuration={6000} onClose={closeSnackbar}>
+        <Alert
+          onClose={closeSnackbar}
+          severity="success"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          Serial input received successfully!
+        </Alert>
+      </Snackbar>
       <Snackbar
-        open={snackbar}
+        open={errorSnackbar}
         autoHideDuration={6000}
-        onClose={closeSnackbar}
-        message="Serial input received"
-        action={
-          <IconButton
-            size="small"
-            aria-label="close"
-            color="inherit"
-            onClick={closeSnackbar}
-          >
-            <Close fontSize="small" />
-          </IconButton>
-        }
-      />
+        onClose={closeErrorSnackbar}
+      >
+        <Alert
+          onClose={closeErrorSnackbar}
+          severity="error"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {errorMessage || 'An error occurred while sending serial input.'}
+        </Alert>
+      </Snackbar>
     </Paper>
   ); // : null;
 };

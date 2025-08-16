@@ -123,6 +123,7 @@ const ipv4Lookup = async () => {
                   if(!data || !data.type || !data.data) {
                     ui.fail('CONTROLLER INPUT ERROR: Invalid Data');
                     socket.emit('server', {type: 'error', msg: 'Controller Input Error: Invalid Data'});
+                    callback({error: 'Invalid Serial Data'});
                     return;
                   }
                   try {
@@ -131,6 +132,8 @@ const ipv4Lookup = async () => {
                     ui.fail(`CONTROLLER INPUT ERROR: ${err}`);
 
                     socket.emit('server', {type: 'error', msg: `Controller TX Error: ${err}`});
+                    callback({error: `Controller TX Error: ${err}`});
+                    return;
                   }
                   callback();
                 });
@@ -140,12 +143,14 @@ const ipv4Lookup = async () => {
                   if(!data || !data.interval || !data.instruction || !data.instruction.type || !data.instruction.data) {
                     ui.fail('SCHEDULER POST ERROR: Invalid Data');
                     socket.emit('server', {type: 'error', msg: 'Scheduler Post Error: Invalid Data'});
+                    callback({error: 'Invalid Scheduler Data'});
                     return;
                   }
                   const schedulerLabel = JSON.stringify(data.instruction);
                   if(schedule[schedulerLabel]) {
                     ui.info(`CONTROLLER INPUT SCHEDULE CLEARED: ${schedulerLabel}`);
                     clearInterval(schedule[schedulerLabel]);
+                    delete schedule[schedulerLabel];
                   }
                   if(typeof data.interval === 'number' && data.interval >= 100) {
                     ui.info(`CONTROLLER INPUT SCHEDULE: ${schedulerLabel} @${data.interval}ms`);
@@ -156,15 +161,33 @@ const ipv4Lookup = async () => {
                       } catch (err) {
                         ui.fail(`CONTROLLER INPUT ERROR: ${err}`);
                         socket.emit('server', {type: 'error', msg: `Controller TX Error: ${err}`});
+                        clearInterval(schedule[schedulerLabel]);
+                        delete schedule[schedulerLabel];
+
+                        callback({error: `Controller TX Error: ${err}`});
+                        return;
                       }
                     }, data.interval);
                     callback();
                   }
                 });
 
-                socket.on('scheduler', (data) => {
-                  ui.info(`SCHEDULER INPUT: ${JSON.stringify(data)}`);
-                  
+                socket.on('scheduler-get', (data, callback) => {
+                  ui.info('SCHEDULER GET');
+                  callback(Object.keys(schedule));
+                });
+
+                socket.on('scheduler-clear', (key, callback) => {
+                  ui.info(`SCHEDULER CLEAR: ${key}`);
+                  if(!schedule[key]) {
+                    ui.fail(`SCHEDULER CLEAR ERROR: No such key "${key}"`);
+                    socket.emit('server', {type: 'error', msg: `Scheduler Clear Error: No such key "${key}"`});
+                    callback({error: `No such key "${key}"`});
+                    return;
+                  }
+                  clearInterval(schedule[key]);
+                  delete schedule[key];
+                  callback();
                 });
               });
             });

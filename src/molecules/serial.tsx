@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   IconButton,
@@ -20,6 +21,8 @@ const SerialInput: FC<SerialInputProps> = () => {
   const { socket } = useSocket();
 
   const [snackbar, setSnackbar] = useState<boolean>(false);
+  const [errorSnackbar, setErrorSnackbar] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const closeSnackbar = (
     event: React.SyntheticEvent | Event,
@@ -30,6 +33,17 @@ const SerialInput: FC<SerialInputProps> = () => {
     }
 
     setSnackbar(false);
+  };
+
+  const closeErrorSnackbar = (
+    event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason
+  ) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setErrorSnackbar(false);
   };
 
   useEffect(() => {
@@ -45,7 +59,14 @@ const SerialInput: FC<SerialInputProps> = () => {
     if (socket && !inputError) {
       try {
         const data = JSON.parse(inputString);
-        socket.emit('serialinput', data, () => setSnackbar(true));
+        socket.emit('serialinput', data, ({ error }) => {
+          if (error) {
+            setErrorMessage(`Rejected: ${error}`);
+            setErrorSnackbar(true);
+          } else {
+            setSnackbar(true);
+          }
+        });
         setInputString('{}'); // Reset input after sending
       } catch (error) {
         console.error('Invalid JSON input:', error);
@@ -89,22 +110,30 @@ const SerialInput: FC<SerialInputProps> = () => {
           Send
         </Button>
       </Box>
+      <Snackbar open={snackbar} autoHideDuration={6000} onClose={closeSnackbar}>
+        <Alert
+          onClose={closeSnackbar}
+          severity="success"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          Serial input received successfully!
+        </Alert>
+      </Snackbar>
       <Snackbar
-        open={snackbar}
+        open={errorSnackbar}
         autoHideDuration={6000}
-        onClose={closeSnackbar}
-        message="Serial input received"
-        action={
-          <IconButton
-            size="small"
-            aria-label="close"
-            color="inherit"
-            onClick={closeSnackbar}
-          >
-            <Close fontSize="small" />
-          </IconButton>
-        }
-      />
+        onClose={closeErrorSnackbar}
+      >
+        <Alert
+          onClose={closeErrorSnackbar}
+          severity="error"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {errorMessage || 'An error occurred while sending serial input.'}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

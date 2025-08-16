@@ -26,9 +26,17 @@ import { useTelemetry } from '@/contexts/telemetry';
 import TelemetryChart from '@/organisms/telemetrychart';
 import { useDevices } from '@/contexts/devices';
 import MessageDataGrid from '@/organisms/datagrid';
-import { Chat, DeviceHub, Insights, Memory, Router } from '@mui/icons-material';
+import {
+  CalendarMonth,
+  Chat,
+  DeviceHub,
+  Insights,
+  Memory,
+  Router,
+} from '@mui/icons-material';
+import Descheduler from '../organisms/descheduler';
 
-const drawerWidth = '15vw';
+const drawerWidth = '240px';
 
 const Dashboard: FC<PropsWithChildren> = ({ children }) => {
   const { connected, sockets } = useSocket();
@@ -40,12 +48,14 @@ const Dashboard: FC<PropsWithChildren> = ({ children }) => {
   const [enableDevices, setEnableDevices] = useState<boolean>(true);
   const [enableTree, setEnableTree] = useState<boolean>(true);
   const [enablePinger, setEnablePinger] = useState<boolean>(true);
+  const [enableDescheduler, setEnableDescheduler] = useState<boolean>(true);
 
   return (
     <Box sx={{ display: 'flex' }}>
       <AppBar
         position="fixed"
-        sx={{ width: `calc(100% - ${drawerWidth})`, ml: `${drawerWidth}` }}
+        // sx={{ width: `calc(100% - ${drawerWidth})`, ml: `${drawerWidth}` }}
+        sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
       >
         <Toolbar>
           <Typography variant="h6" noWrap component="div">
@@ -139,6 +149,22 @@ const Dashboard: FC<PropsWithChildren> = ({ children }) => {
               />
             </ListItemButton>
           </ListItem>
+          <Divider />
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => setEnableDescheduler(!enableDescheduler)}
+            >
+              <ListItemIcon>
+                <CalendarMonth />
+              </ListItemIcon>
+              <ListItemText primary={'Descheduler'} />
+              <Checkbox
+                edge="end"
+                checked={enableDescheduler}
+                onChange={() => setEnableDescheduler(!enableDescheduler)}
+              />
+            </ListItemButton>
+          </ListItem>
         </List>
         <Divider />
       </Drawer>
@@ -182,6 +208,11 @@ const Dashboard: FC<PropsWithChildren> = ({ children }) => {
             {enablePinger && (
               <Grid size={{ xs: 12, md: 4 }}>
                 <Pinger />
+              </Grid>
+            )}
+            {enableDescheduler && (
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Descheduler />
               </Grid>
             )}
             {enableDevices &&
