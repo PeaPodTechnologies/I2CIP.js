@@ -5,15 +5,19 @@ import {
   Box,
   Button,
   Checkbox,
+  IconButton,
   List,
   ListItem,
   ListItemText,
   Paper,
+  Snackbar,
+  SnackbarCloseReason,
   TextField,
   Typography,
 } from '@mui/material';
 import { useDevices } from '@/contexts/devices';
 import { useSocket } from '@/contexts/socket';
+import { Close } from '@mui/icons-material';
 
 // export type DeviceTreeProps = {
 //   socket?: string;
@@ -29,6 +33,19 @@ const DeviceTree: FC = () => {
   const [isInterval, setIsInterval] = useState<boolean>(false);
   const [interval, _setInterval] = useState<number>(0);
 
+  const [snackbar, setSnackbar] = useState<boolean>(false);
+
+  const closeSnackbar = (
+    event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason
+  ) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setSnackbar(false);
+  };
+
   const handleRebuild = () => {
     const instruction = {
       type: 'command',
@@ -37,12 +54,16 @@ const DeviceTree: FC = () => {
       },
     };
     if (isInterval && interval > 1) {
-      socket.emit('scheduler-post', {
-        interval: interval * 1000,
-        instruction,
-      });
+      socket.emit(
+        'scheduler-post',
+        {
+          interval: interval * 1000,
+          instruction,
+        },
+        () => setSnackbar(true)
+      );
     } else {
-      socket.emit('serialinput', instruction);
+      socket.emit('serialinput', instruction, () => setSnackbar(true));
     }
   };
 
@@ -100,6 +121,22 @@ const DeviceTree: FC = () => {
           Send
         </Button>
       </Box>
+      <Snackbar
+        open={snackbar}
+        autoHideDuration={6000}
+        onClose={closeSnackbar}
+        message="Serial input received"
+        action={
+          <IconButton
+            size="small"
+            aria-label="close"
+            color="inherit"
+            onClick={closeSnackbar}
+          >
+            <Close fontSize="small" />
+          </IconButton>
+        }
+      />
     </Paper>
   ); // : null;
 };

@@ -3,7 +3,10 @@ import {
   Box,
   Button,
   Checkbox,
+  IconButton,
   Paper,
+  Snackbar,
+  SnackbarCloseReason,
   TextField,
   Typography,
 } from '@mui/material';
@@ -18,6 +21,7 @@ import {
   DEVICE_ARG_TYPES_SET,
   DeviceID,
 } from '../devicetypes';
+import { Close } from '@mui/icons-material';
 
 const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
   const { socket } = useSocket();
@@ -27,6 +31,19 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
 
   const [interval, _setInterval] = useState<number>(0);
   const [isInterval, setIsInterval] = useState<boolean>(false);
+
+  const [snackbar, setSnackbar] = useState<boolean>(false);
+  
+  const closeSnackbar = (
+    event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason
+  ) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setSnackbar(false);
+  };
 
   const handleSet = () => {
     const instruction = {
@@ -41,9 +58,9 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
       socket.emit('scheduler-post', {
         interval: interval * 1000,
         instruction,
-      });
+      }, () => setSnackbar(true));
     } else {
-      socket.emit('serialinput', instruction);
+      socket.emit('serialinput', instruction, () => setSnackbar(true));
     }
   };
 
@@ -61,9 +78,9 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
       socket.emit('scheduler-post', {
         interval: interval * 1000,
         instruction,
-      });
+      }, () => setSnackbar(true));
     } else {
-      socket.emit('serialinput', instruction);
+      socket.emit('serialinput', instruction, () => setSnackbar(true));
     }
   };
 
@@ -200,6 +217,22 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
           />
         ) : null}
       </Box>
+      <Snackbar
+        open={snackbar}
+        autoHideDuration={6000}
+        onClose={closeSnackbar}
+        message="Serial input received"
+        action={
+          <IconButton
+            size="small"
+            aria-label="close"
+            color="inherit"
+            onClick={closeSnackbar}
+          >
+            <Close fontSize="small" />
+          </IconButton>
+        }
+      />
     </Paper>
   );
 };

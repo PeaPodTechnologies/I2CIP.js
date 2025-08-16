@@ -118,7 +118,7 @@ const ipv4Lookup = async () => {
                 socket.on('disconnect', () => {
                   ui.log('Socket.IO --');
                 });
-                socket.on('serialinput', (data) => {
+                socket.on('serialinput', (data, callback) => {
                   ui.info(`CONTROLLER INPUT: ${JSON.stringify(data)}`);
                   if(!data || !data.type || !data.data) {
                     ui.fail('CONTROLLER INPUT ERROR: Invalid Data');
@@ -132,9 +132,10 @@ const ipv4Lookup = async () => {
 
                     socket.emit('server', {type: 'error', msg: `Controller TX Error: ${err}`});
                   }
+                  callback();
                 });
 
-                socket.on('scheduler-post', (data) => {
+                socket.on('scheduler-post', (data, callback) => {
                   ui.info(`SCHEDULER POST: ${JSON.stringify(data)}`);
                   if(!data || !data.interval || !data.instruction || !data.instruction.type || !data.instruction.data) {
                     ui.fail('SCHEDULER POST ERROR: Invalid Data');
@@ -157,6 +158,7 @@ const ipv4Lookup = async () => {
                         socket.emit('server', {type: 'error', msg: `Controller TX Error: ${err}`});
                       }
                     }, data.interval);
+                    callback();
                   }
                 });
 

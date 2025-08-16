@@ -1,4 +1,12 @@
-import { Box, Button, TextField } from '@mui/material';
+import {
+  Box,
+  Button,
+  IconButton,
+  Snackbar,
+  SnackbarCloseReason,
+  TextField,
+} from '@mui/material';
+import { Close } from '@mui/icons-material';
 import { FC, useEffect, useState } from 'react';
 import { useSocket } from '@/contexts/socket';
 
@@ -10,6 +18,19 @@ const SerialInput: FC<SerialInputProps> = () => {
   const [inputString, setInputString] = useState('{}');
   const [inputError, setInputError] = useState(false);
   const { socket } = useSocket();
+
+  const [snackbar, setSnackbar] = useState<boolean>(false);
+
+  const closeSnackbar = (
+    event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason
+  ) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setSnackbar(false);
+  };
 
   useEffect(() => {
     try {
@@ -24,7 +45,7 @@ const SerialInput: FC<SerialInputProps> = () => {
     if (socket && !inputError) {
       try {
         const data = JSON.parse(inputString);
-        socket.emit('serialinput', data);
+        socket.emit('serialinput', data, () => setSnackbar(true));
         setInputString('{}'); // Reset input after sending
       } catch (error) {
         console.error('Invalid JSON input:', error);
@@ -68,6 +89,22 @@ const SerialInput: FC<SerialInputProps> = () => {
           Send
         </Button>
       </Box>
+      <Snackbar
+        open={snackbar}
+        autoHideDuration={6000}
+        onClose={closeSnackbar}
+        message="Serial input received"
+        action={
+          <IconButton
+            size="small"
+            aria-label="close"
+            color="inherit"
+            onClick={closeSnackbar}
+          >
+            <Close fontSize="small" />
+          </IconButton>
+        }
+      />
     </Box>
   );
 };

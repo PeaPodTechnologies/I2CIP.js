@@ -32,8 +32,8 @@ const Pinger: FC = () => {
           {devices.map((m) =>
             Object.entries(m).map(([id, fqas]) =>
               fqas && Array.isArray(fqas) ? (
-                <>
-                  <ListItem key={`${id}-${m}`}>
+                <div key={`${id}-${m}`}>
+                  <ListItem>
                     <ListItemText primary={id} />
                   </ListItem>
                   {fqas.map((fqa) => (
@@ -49,7 +49,7 @@ const Pinger: FC = () => {
                       </Button>
                     </ListItem>
                   ))}
-                </>
+                </div>
               ) : null
             )
           )}

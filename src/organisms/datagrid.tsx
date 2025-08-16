@@ -1,5 +1,10 @@
 import { Paper, Typography } from '@mui/material';
-import { GridColDef, GridRowsProp, DataGrid } from '@mui/x-data-grid';
+import {
+  GridColDef,
+  GridRowsProp,
+  DataGrid,
+  GridColumnResizeParams,
+} from '@mui/x-data-grid';
 import { FC, useState } from 'react';
 import { useSocket } from '../contexts/socket';
 
@@ -11,12 +16,22 @@ type MessageDataGridProps = {
 
 const MessageDataGrid: FC<MessageDataGridProps> = ({ socket }) => {
   const { messages } = useSocket();
+  const [columnWidths, setColumnWidths] = useState({
+    timestamp: 180,
+    type: 150,
+    data: 300,
+    msg: 300,
+  });
 
   const columns: GridColDef[] = [
-    { field: 'timestamp', headerName: 'Timestamp', width: 180 },
-    { field: 'type', headerName: 'Type', width: 150 },
-    { field: 'msg', headerName: 'Message', width: 300 },
-    { field: 'data', headerName: 'Data', width: 300 },
+    {
+      field: 'timestamp',
+      headerName: 'Timestamp',
+      width: columnWidths.timestamp,
+    },
+    { field: 'type', headerName: 'Type', width: columnWidths.type },
+    { field: 'data', headerName: 'Data', width: columnWidths.data },
+    { field: 'msg', headerName: 'Message', width: columnWidths.msg },
   ];
 
   const rows: GridRowsProp = messages[socket]
@@ -26,7 +41,12 @@ const MessageDataGrid: FC<MessageDataGridProps> = ({ socket }) => {
       timestamp: message['timestamp'],
       type: message['type'],
       msg: message['msg'],
-      data: JSON.stringify(message['data']),
+      data: JSON.stringify({
+        ...message,
+        timestamp: undefined,
+        type: undefined,
+        msg: undefined,
+      }),
     }));
 
   return (
@@ -47,6 +67,12 @@ const MessageDataGrid: FC<MessageDataGridProps> = ({ socket }) => {
         pageSizeOptions={DEBUGJSON_NUM_DATA_OPTIONS}
         checkboxSelection
         disableRowSelectionOnClick
+        onColumnWidthChange={(params: GridColumnResizeParams) => {
+          setColumnWidths((prev) => ({
+            ...prev,
+            [params.colDef.field]: params.width,
+          }));
+        }}
       />
     </Paper>
   );
