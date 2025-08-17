@@ -33,6 +33,7 @@ const TelemetryProvider = ({
 
   const { messages } = useSocket();
 
+  // TODO: This is insanely inefficient, fix this later
   useEffect(() => {
     if (messages && messages[sock]) {
       setTelemetry(

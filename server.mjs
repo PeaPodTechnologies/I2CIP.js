@@ -20,6 +20,9 @@ console.error = _errRedirect;
 const _msg_print_delta = 1;
 var _msg_print_count = 0;
 
+var schedule = {}; // { [key: instruction string]: NodeJS.Timeout} - Scheduled tasks
+var linker = {encoder: [{key: 's', cast: 'number', instruction: {type: 'command', data: {fqa: 8183, b: 3}}}]}; // { [key: `telemetry key`]: { `instruction`: object, `key`: string, `cast`: 'string' | 'number' | 'boolean' }[] } - On `telemetry key`, send {...`instruction`, [`key`]: telemetry value as `cast`}
+
 // Helper: IPv4 Address Lookup (Fallback to 'localhost')
 const ipv4Lookup = async () => {
   const h = hostname();
@@ -29,6 +32,20 @@ const ipv4Lookup = async () => {
       res((err || !addrs || !(addrs.length)) ? 'localhost' : addrs.find((a) => (a.address !== '127.0.0.1')).address);
     });
   });
+};
+
+const linkerTyper = (value, cast)  => {
+  if(cast === 'string') return String(value);
+  if(cast === 'number') return Number(value);
+  if(cast === 'boolean') return Boolean(value);
+  return undefined;
+};
+
+const linkerChecker = (value, cast) => {
+  if(cast === 'string') return typeof value === 'string';
+  if(cast === 'number') return typeof value === 'number' && !isNaN(value);
+  if(cast === 'boolean') return typeof value === 'boolean';
+  return false;
 };
 
 (() => {
@@ -75,13 +92,38 @@ const ipv4Lookup = async () => {
               // Emit to WebSockets
               messages.forEach((msg) => {
                 io.emit('microcontroller', msg);
+
+                // LINKER HANDLER
+
+                if(msg.data) {
+                  Object.keys(linker).forEach((key, index) => {
+                    if(msg.data[key] !== undefined) {
+                      const cast = linker[key][index].cast;
+                      const value = linkerTyper(msg.data[key], cast);
+                      if(!linkerChecker(value, cast)) {
+                        ui.fail(`LINKER ERROR: Invalid Type ${cast} for ${key} -> ${value} (${typeof value})`);
+                        return; // Next key
+                      }
+                      let instruction = { ...linker[key][index].instruction };
+                      instruction.data = { ...instruction.data, [linker[key][index].key]: value };
+                      ui.info(`LINKER: ${key}: ${msg.data[key]} -> ${JSON.stringify(instruction)}`);
+                      try {
+                        microcontroller.write(instruction);
+                      } catch (err) {
+                        ui.fail(`LINKER ERROR: ${err}`);
+                        io.emit('server', {type: 'error', msg: `Linker TX Error: ${err}`});
+                        return; // Next key
+                      }
+                    }
+                  });
+                }
               });
               
               // Push to Firebase Realtime Database
               // pushDebugMessages(messages, 'microcontroller');
               
               // if (_msg_print_count % _msg_print_delta === 0) {
-                ui.info(`CONTROLLER JSON[${_msg_print_count}]: ${JSON.stringify(messages[0])}`);
+              ui.info(`CONTROLLER JSON[${_msg_print_count}]: ${JSON.stringify(messages[0])}`);
               // }
               _msg_print_count++;
 
@@ -103,8 +145,6 @@ const ipv4Lookup = async () => {
             }).then(() => {
               ui.succeed(`I2CIP.js Ready!`);
 
-              var schedule = {};
-
               // 6. Socket.IO Connection Handler
               io.on('connection', (socket) => {
                 ui.log('Socket.IO ++');
@@ -118,6 +158,9 @@ const ipv4Lookup = async () => {
                 socket.on('disconnect', () => {
                   ui.log('Socket.IO --');
                 });
+
+                // SERIAL INPUT SOCKET HANDLERS
+
                 socket.on('serialinput', (data, callback) => {
                   ui.info(`CONTROLLER INPUT: ${JSON.stringify(data)}`);
                   if(!data || !data.type || !data.data) {
@@ -137,6 +180,8 @@ const ipv4Lookup = async () => {
                   }
                   callback();
                 });
+
+                // SCHEDULER SOCKET HANDLERS
 
                 socket.on('scheduler-post', (data, callback) => {
                   ui.info(`SCHEDULER POST: ${JSON.stringify(data)}`);
@@ -187,6 +232,22 @@ const ipv4Lookup = async () => {
                   }
                   clearInterval(schedule[key]);
                   delete schedule[key];
+                  callback();
+                });
+
+                // LINKER SOCKET HANDLERS
+
+                socket.on('linker-post', (data, callback) => {
+                  ui.info(`LINKER POST: ${JSON.stringify(data)}`);
+                  if(!data || !data.key || !data.type || !data.instruction || !data.instruction.type || !data.instruction.data) {
+                    ui.fail('LINKER POST ERROR: Invalid Data');
+                    socket.emit('server', {type: 'error', msg: 'Linker Post Error: Invalid Data'});
+                    callback({error: 'Invalid Linker Data'});
+                    return;
+                  }
+                  const linkerKey = String(data.key);
+                  if(!linker[linkerKey]) linker[linkerKey] = [];
+                  linker[linkerKey].push({instruction: {type: data.instruction.type, data: {...data.instruction.data, [linkerKey]: undefined} }, key: linkerKey, type: data.type});
                   callback();
                 });
               });
