@@ -27,6 +27,7 @@ import TelemetryChart from '@/organisms/telemetrychart';
 import { useDevices } from '@/contexts/devices';
 import MessageDataGrid from '@/organisms/datagrid';
 import {
+  Build,
   CalendarMonth,
   Chat,
   DeviceHub,
@@ -35,6 +36,7 @@ import {
   Router,
 } from '@mui/icons-material';
 import Descheduler from '../organisms/descheduler';
+import Linker from '../organisms/unlinker';
 
 const drawerWidth = '240px';
 
@@ -49,6 +51,7 @@ const Dashboard: FC<PropsWithChildren> = ({ children }) => {
   const [enableTree, setEnableTree] = useState<boolean>(true);
   const [enablePinger, setEnablePinger] = useState<boolean>(true);
   const [enableDescheduler, setEnableDescheduler] = useState<boolean>(true);
+  const [enableLinker, setEnableLinker] = useState<boolean>(true);
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -165,6 +168,20 @@ const Dashboard: FC<PropsWithChildren> = ({ children }) => {
               />
             </ListItemButton>
           </ListItem>
+          <Divider />
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => setEnableLinker(!enableLinker)}>
+              <ListItemIcon>
+                <Build />
+              </ListItemIcon>
+              <ListItemText primary={'Linker'} />
+              <Checkbox
+                edge="end"
+                checked={enableLinker}
+                onChange={() => setEnableLinker(!enableLinker)}
+              />
+            </ListItemButton>
+          </ListItem>
         </List>
         <Divider />
       </Drawer>
@@ -213,6 +230,11 @@ const Dashboard: FC<PropsWithChildren> = ({ children }) => {
             {enableDescheduler && (
               <Grid size={{ xs: 12, md: 4 }}>
                 <Descheduler />
+              </Grid>
+            )}
+            {enableLinker && (
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Linker />
               </Grid>
             )}
             {enableDevices &&

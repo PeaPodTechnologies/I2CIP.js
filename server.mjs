@@ -21,7 +21,8 @@ const _msg_print_delta = 1;
 var _msg_print_count = 0;
 
 var schedule = {}; // { [key: instruction string]: NodeJS.Timeout} - Scheduled tasks
-var linker = {encoder: [{key: 's', cast: 'number', instruction: {type: 'command', data: {fqa: 8183, b: 3}}}]}; // { [key: `telemetry key`]: { `instruction`: object, `key`: string, `cast`: 'string' | 'number' | 'boolean' }[] } - On `telemetry key`, send {...`instruction`, [`key`]: telemetry value as `cast`}
+var linker = {};
+// var linker = {encoder: [{key: 's', cast: 'number', eval: 'value * (-15)', instruction: {type: 'command', data: {fqa: 8183, b: 3}}}]}; // { [key: `telemetry key`]: { `instruction`: object, `key`: string, `cast`: 'string' | 'number' | 'boolean' }[] } - On `telemetry key`, send {...`instruction`, [`key`]: telemetry value as `cast`}
 
 // Helper: IPv4 Address Lookup (Fallback to 'localhost')
 const ipv4Lookup = async () => {
@@ -46,6 +47,16 @@ const linkerChecker = (value, cast) => {
   if(cast === 'number') return typeof value === 'number' && !isNaN(value);
   if(cast === 'boolean') return typeof value === 'boolean';
   return false;
+};
+
+const linkerEvaluator = (value, evalStr) => {
+  if(!evalStr || typeof evalStr !== 'string') return value;
+  try {
+    return eval(evalStr.replace(/value/g, value));
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (err) {
+    return undefined;
+  }
 };
 
 (() => {
@@ -96,25 +107,27 @@ const linkerChecker = (value, cast) => {
                 // LINKER HANDLER
 
                 if(msg.data) {
-                  Object.keys(linker).forEach((key, index) => {
-                    if(msg.data[key] !== undefined) {
-                      const cast = linker[key][index].cast;
-                      const value = linkerTyper(msg.data[key], cast);
-                      if(!linkerChecker(value, cast)) {
-                        ui.fail(`LINKER ERROR: Invalid Type ${cast} for ${key} -> ${value} (${typeof value})`);
-                        return; // Next key
+                  Object.keys(linker).forEach((key) => {
+                    linker[key].forEach((item, index) => {
+                      if(msg.data[key] !== undefined) {
+                        const evalStr = item.eval;
+                        const cast = item.cast;
+                        const value = linkerTyper(linkerEvaluator(msg.data[key], evalStr), cast);
+                        if(!linkerChecker(value, cast)) {
+                          ui.fail(`LINKER ERROR: Invalid Type ${cast} for ${key} -> ${value} (${typeof value})`);
+                          return; // Next key
+                        }
+                        const instruction = { ...item.instruction, data: { ...item.instruction.data, [item.key]: value } };
+                        ui.info(`LINKER: ${key}: ${msg.data[key]} -> '${evalStr}' as ${cast} = ${value} -> ${JSON.stringify(instruction)}`);
+                        try {
+                          microcontroller.write(instruction);
+                        } catch (err) {
+                          ui.fail(`LINKER ERROR: ${err}`);
+                          io.emit('server', {type: 'error', msg: `Linker TX Error: ${err}`});
+                          return; // Next key
+                        }
                       }
-                      let instruction = { ...linker[key][index].instruction };
-                      instruction.data = { ...instruction.data, [linker[key][index].key]: value };
-                      ui.info(`LINKER: ${key}: ${msg.data[key]} -> ${JSON.stringify(instruction)}`);
-                      try {
-                        microcontroller.write(instruction);
-                      } catch (err) {
-                        ui.fail(`LINKER ERROR: ${err}`);
-                        io.emit('server', {type: 'error', msg: `Linker TX Error: ${err}`});
-                        return; // Next key
-                      }
-                    }
+                    });
                   });
                 }
               });
@@ -143,7 +156,7 @@ const linkerChecker = (value, cast) => {
               // io.off('connection', handleSocketConnection);
               microcontroller.reset();
             }).then(() => {
-              ui.succeed(`I2CIP.js Ready!`);
+              ui.succeed('I2CIP.js Ready!');
 
               // 6. Socket.IO Connection Handler
               io.on('connection', (socket) => {
@@ -239,15 +252,40 @@ const linkerChecker = (value, cast) => {
 
                 socket.on('linker-post', (data, callback) => {
                   ui.info(`LINKER POST: ${JSON.stringify(data)}`);
-                  if(!data || !data.key || !data.type || !data.instruction || !data.instruction.type || !data.instruction.data) {
+                  if(!data || !data.label || !data.key || !data.cast || !data.instruction || !data.eval || !data.instruction.type || !data.instruction.data) {
                     ui.fail('LINKER POST ERROR: Invalid Data');
                     socket.emit('server', {type: 'error', msg: 'Linker Post Error: Invalid Data'});
                     callback({error: 'Invalid Linker Data'});
                     return;
                   }
-                  const linkerKey = String(data.key);
-                  if(!linker[linkerKey]) linker[linkerKey] = [];
-                  linker[linkerKey].push({instruction: {type: data.instruction.type, data: {...data.instruction.data, [linkerKey]: undefined} }, key: linkerKey, type: data.type});
+                  if(!linker[data.label]) linker[data.label] = [];
+                  linker[data.label].push({
+                    instruction: {
+                      type: data.instruction.type,
+                      data: {
+                        ...data.instruction.data,
+                        [data.key]: undefined
+                      } 
+                    }, 
+                    key: data.key, 
+                    eval: data.eval, 
+                    cast: data.cast
+                  });
+                  callback();
+                });
+
+                socket.on('linker-get', (data, callback) => {
+                  ui.info('LINKER GET');
+                  callback(linker);
+                });
+
+                socket.on('linker-clear', (label, instruction, callback) => {
+                  ui.info(`LINKER CLEAR: ${label} ${JSON.stringify(instruction)}`);
+                  if(linker[label]) {
+                    linker[label] = linker[label].filter((item) => {
+                      return !(item.instruction.type === instruction.type && JSON.stringify(item.instruction.data) === JSON.stringify(instruction.data));
+                    });
+                  }
                   callback();
                 });
               });

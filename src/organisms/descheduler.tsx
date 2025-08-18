@@ -96,7 +96,7 @@ const Descheduler: FC = () => {
           variant="filled"
           sx={{ width: '100%' }}
         >
-          Schedule refreshed successfully!
+          Schedule updated successfully!
         </Alert>
       </Snackbar>
       <Snackbar

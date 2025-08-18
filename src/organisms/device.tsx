@@ -5,13 +5,16 @@ import {
   Button,
   Checkbox,
   IconButton,
+  MenuItem,
   Paper,
+  Select,
   Snackbar,
   SnackbarCloseReason,
   TextField,
   Typography,
 } from '@mui/material';
 import { useSocket } from '@/contexts/socket';
+import { useTelemetry } from '@/contexts/telemetry';
 import { fqaToString } from '../utils';
 import {
   DEVICE_ARG_HAS,
@@ -24,14 +27,30 @@ import {
 } from '../devicetypes';
 import { Close } from '@mui/icons-material';
 
+type AddLinkerType = {
+  label: string;
+  key: 'g' | 'a' | 's' | 'b';
+  cast: 'string' | 'number' | 'boolean';
+  eval: string; // Optional evaluation expression;
+};
+
 const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
   const { socket } = useSocket();
+  const { telemetry } = useTelemetry();
   const [argsA, setArgsA] = useState<string>('');
   const [argsS, setArgsS] = useState<string>('');
   const [argsB, setArgsB] = useState<string>('');
 
   const [interval, _setInterval] = useState<number>(0);
   const [isInterval, setIsInterval] = useState<boolean>(false);
+
+  const [addLinker, setAddLinker] = useState<boolean>(false);
+  const [addLinkerData, setAddLinkerData] = useState<AddLinkerType>({
+    label: '',
+    key: 's',
+    cast: 'number',
+    eval: 'value',
+  });
 
   const [snackbar, setSnackbar] = useState<boolean>(false);
   const [errorSnackbar, setErrorSnackbar] = useState<boolean>(false);
@@ -59,9 +78,9 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
     setErrorSnackbar(false);
   };
 
-  const handleResponse = ({ error }) => {
-    if (error) {
-      setErrorMessage(error);
+  const handleResponse = (response) => {
+    if (response && response.error) {
+      setErrorMessage(response.error);
       setErrorSnackbar(true);
     } else {
       setSnackbar(true);
@@ -77,7 +96,22 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
         b: DEVICE_ARG_PARSE_B[deviceId](argsB) || undefined,
       },
     };
-    if (isInterval && interval > 0.1) {
+    if (addLinker) {
+      socket.emit(
+        'linker-post',
+        {
+          label: addLinkerData.label,
+          key: addLinkerData.key,
+          cast: addLinkerData.cast,
+          eval: addLinkerData.eval,
+          instruction: {
+            ...instruction,
+            [addLinkerData.key]: undefined,
+          },
+        },
+        handleResponse
+      );
+    } else if (isInterval && interval > 0.1) {
       socket.emit(
         'scheduler-post',
         {
@@ -174,7 +208,8 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
             !DEVICE_ARG_HAS[deviceId].s ||
             !DEVICE_ARG_TYPES_SET[deviceId](argsS, argsB) ||
             !socket ||
-            (isInterval && interval <= 0)
+            (isInterval && interval <= 0) ||
+            (addLinker && !addLinkerData.label)
           }
           onClick={handleSet}
         >
@@ -212,13 +247,45 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
             !DEVICE_ARG_HAS[deviceId].g ||
             !DEVICE_ARG_TYPES_GET[deviceId](argsA) ||
             !socket ||
-            (isInterval && interval <= 0)
+            (isInterval && interval <= 0) ||
+            (addLinker && !addLinkerData.label)
           }
           onClick={handleGet}
         >
           Get
         </Button>
       ) : null}
+      {!addLinker && (
+        <Box
+          component="form"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            flexDirection: 'row',
+            '& .MuiTextField-root': { m: 1, width: '25ch' },
+          }}
+          noValidate
+          autoComplete="off"
+          onSubmit={(e) => {
+            e.preventDefault(); // Prevents page refresh
+          }}
+        >
+          <Typography>Schedule?</Typography>
+          <Checkbox
+            checked={isInterval}
+            onChange={(e) => setIsInterval(e.target.checked)}
+          />
+          {isInterval ? (
+            <TextField
+              label="Interval (Seconds)"
+              type="number"
+              value={interval ?? ''}
+              error={interval <= 0}
+              onChange={(e) => _setInterval(Number(e.target.value))}
+            />
+          ) : null}
+        </Box>
+      )}
       <Box
         component="form"
         sx={{
@@ -233,20 +300,65 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
           e.preventDefault(); // Prevents page refresh
         }}
       >
-        <Typography>Schedule?</Typography>
+        <Typography>Linker?</Typography>
         <Checkbox
-          checked={isInterval}
-          onChange={(e) => setIsInterval(e.target.checked)}
+          checked={addLinker}
+          onChange={(e) => setAddLinker(e.target.checked)}
         />
-        {isInterval ? (
-          <TextField
-            label="Interval (Seconds)"
-            type="number"
-            value={interval ?? ''}
-            error={interval <= 0}
-            onChange={(e) => _setInterval(Number(e.target.value))}
-          />
-        ) : null}
+        {addLinker && (
+          <>
+            <Select
+              id="linker-label"
+              label="Source"
+              value={addLinkerData.label || ''}
+              onChange={(e) =>
+                setAddLinkerData({
+                  ...addLinkerData,
+                  label: e.target.value,
+                })
+              }
+              required
+            >
+              {Object.keys(telemetry).sort().map((label) => (
+                <MenuItem key={label} value={label}>
+                  {label}
+                </MenuItem>
+              ))}
+            </Select>
+            <Select
+              id="linker-key"
+              label="Key"
+              value={addLinkerData.key || 's'}
+              onChange={(e) =>
+                setAddLinkerData({
+                  ...addLinkerData,
+                  key: e.target.value,
+                })
+              }
+              required
+            >
+              <MenuItem value="g">Get G</MenuItem>
+              <MenuItem value="a">GetArgs A</MenuItem>
+              <MenuItem value="s">Set S</MenuItem>
+              <MenuItem value="b">SetArgs B</MenuItem>
+            </Select>
+            <Select
+              id="linker-cast"
+              value={addLinkerData.cast || 'number'}
+              onChange={(e) =>
+                setAddLinkerData({
+                  ...addLinkerData,
+                  cast: e.target.value,
+                })
+              }
+              required
+            >
+              <MenuItem value="string">String</MenuItem>
+              <MenuItem value="number">Number</MenuItem>
+              <MenuItem value="boolean">Boolean</MenuItem>
+            </Select>
+          </>
+        )}
       </Box>
       <Snackbar open={snackbar} autoHideDuration={6000} onClose={closeSnackbar}>
         <Alert

@@ -58,9 +58,9 @@ const DeviceTree: FC = () => {
     setErrorSnackbar(false);
   };
 
-  const handleResponse = ({ error }) => {
-    if (error) {
-      setErrorMessage(error);
+  const handleResponse = (response) => {
+    if (response && response.error) {
+      setErrorMessage(response.error);
       setErrorSnackbar(true);
     } else {
       setSnackbar(true);

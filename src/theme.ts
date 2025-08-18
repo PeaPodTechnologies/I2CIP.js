@@ -9,7 +9,13 @@ const theme = createTheme({
     },
     error: {
       main: '#c85e41',
-    }
+    },
+    primary: {
+      main: '#197d2a',
+    },
+    secondary: {
+      main: '#e47862',
+    },
   },
   components: {
     MuiAlert: {
