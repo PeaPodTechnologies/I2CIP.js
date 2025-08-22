@@ -11,6 +11,7 @@ import { findSerialPort, MicroController, CONTROLLER_REVISION } from './api/cont
 // import { pushDebugMessage, pushDebugMessages } from './api/firebase.mjs';
 import ui, { _logRedirect, _errRedirect } from './api/ui.mjs';
 import {DebugJsonSerialportError} from './api/errors.mjs';
+import { appendFileSync } from 'fs';
 
 // Redirect console.log/.error calls to ui.log/.err
 console.log = _logRedirect;
@@ -103,6 +104,8 @@ const linkerEvaluator = (value, evalStr) => {
               // Emit to WebSockets
               messages.forEach((msg) => {
                 io.emit('microcontroller', msg);
+
+                appendFileSync(`logs/${(new Date()).toISOString().split('T')[0]}.txt`, JSON.stringify(msg) + '\n');
 
                 // LINKER HANDLER
 

@@ -4,7 +4,9 @@ import {
   Box,
   Button,
   Checkbox,
+  FormControl,
   IconButton,
+  InputLabel,
   MenuItem,
   Paper,
   Select,
@@ -153,7 +155,7 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
     <Paper elevation={3} square={false} sx={{ padding: 2 }}>
       <div>{deviceId}</div>
       <div>{fqaToString(fqa)}</div>
-      {DEVICE_ARG_HAS[deviceId].b ? (
+      {DEVICE_ARG_HAS[deviceId].b && (
         <Box
           component="form"
           sx={{
@@ -176,8 +178,8 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
             }}
           />
         </Box>
-      ) : null}
-      {DEVICE_ARG_HAS[deviceId].s ? (
+      )}
+      {DEVICE_ARG_HAS[deviceId].s && (
         <Box
           component="form"
           sx={{
@@ -200,8 +202,8 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
             }}
           />
         </Box>
-      ) : null}
-      {DEVICE_ARG_HAS[deviceId].s ? (
+      )}
+      {DEVICE_ARG_HAS[deviceId].s && (
         <Button
           variant="contained"
           disabled={
@@ -215,8 +217,8 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
         >
           Set
         </Button>
-      ) : null}
-      {DEVICE_ARG_HAS[deviceId].a ? (
+      )}
+      {DEVICE_ARG_HAS[deviceId].a && (
         <Box
           component="form"
           sx={{
@@ -239,8 +241,8 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
             }}
           />
         </Box>
-      ) : null}
-      {DEVICE_ARG_HAS[deviceId].g ? (
+      )}
+      {DEVICE_ARG_HAS[deviceId].g && (
         <Button
           variant="contained"
           disabled={
@@ -254,14 +256,14 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
         >
           Get
         </Button>
-      ) : null}
+      )}
       {!addLinker && (
         <Box
           component="form"
           sx={{
             display: 'flex',
             alignItems: 'center',
-            flexDirection: 'row',
+            flexDirection: 'column',
             '& .MuiTextField-root': { m: 1, width: '25ch' },
           }}
           noValidate
@@ -270,11 +272,15 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
             e.preventDefault(); // Prevents page refresh
           }}
         >
-          <Typography>Schedule?</Typography>
-          <Checkbox
-            checked={isInterval}
-            onChange={(e) => setIsInterval(e.target.checked)}
-          />
+          <Box
+            sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}
+          >
+            <Typography>Schedule?</Typography>
+            <Checkbox
+              checked={isInterval}
+              onChange={(e) => setIsInterval(e.target.checked)}
+            />
+          </Box>
           {isInterval ? (
             <TextField
               label="Interval (Seconds)"
@@ -291,8 +297,9 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
         sx={{
           display: 'flex',
           alignItems: 'center',
-          flexDirection: 'row',
-          '& .MuiTextField-root': { m: 1, width: '25ch' },
+          flexDirection: 'column',
+          '& .MuiTextField-root': { m: 1, minWidth: '25ch' },
+          '& .MuiSelect-root': { m: 1, minWidth: '25ch' },
         }}
         noValidate
         autoComplete="off"
@@ -300,63 +307,93 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
           e.preventDefault(); // Prevents page refresh
         }}
       >
-        <Typography>Linker?</Typography>
-        <Checkbox
-          checked={addLinker}
-          onChange={(e) => setAddLinker(e.target.checked)}
-        />
+        <Box
+          sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}
+        >
+          <Typography>Linker?</Typography>
+          <Checkbox
+            checked={addLinker}
+            onChange={(e) => setAddLinker(e.target.checked)}
+          />
+        </Box>
         {addLinker && (
           <>
-            <Select
-              id="linker-label"
-              label="Source"
-              value={addLinkerData.label || ''}
+            <FormControl variant="outlined">
+              <InputLabel id="linker-source-label">Source</InputLabel>
+              <Select
+                id="linker-source"
+                labelId="linker-source-label"
+                label="Source"
+                value={addLinkerData.label || ''}
+                onChange={(e) =>
+                  setAddLinkerData({
+                    ...addLinkerData,
+                    label: e.target.value,
+                  })
+                }
+                required
+              >
+                {Object.keys(telemetry)
+                  .sort()
+                  .map((label) => (
+                    <MenuItem key={label} value={label}>
+                      {label}
+                    </MenuItem>
+                  ))}
+              </Select>
+            </FormControl>
+            <TextField
+              id="linker-eval"
+              label="Expression"
+              value={addLinkerData.eval}
               onChange={(e) =>
                 setAddLinkerData({
                   ...addLinkerData,
-                  label: e.target.value,
+                  eval: e.target.value,
                 })
               }
-              required
-            >
-              {Object.keys(telemetry).sort().map((label) => (
-                <MenuItem key={label} value={label}>
-                  {label}
-                </MenuItem>
-              ))}
-            </Select>
-            <Select
-              id="linker-key"
-              label="Key"
-              value={addLinkerData.key || 's'}
-              onChange={(e) =>
-                setAddLinkerData({
-                  ...addLinkerData,
-                  key: e.target.value,
-                })
-              }
-              required
-            >
-              <MenuItem value="g">Get G</MenuItem>
-              <MenuItem value="a">GetArgs A</MenuItem>
-              <MenuItem value="s">Set S</MenuItem>
-              <MenuItem value="b">SetArgs B</MenuItem>
-            </Select>
-            <Select
-              id="linker-cast"
-              value={addLinkerData.cast || 'number'}
-              onChange={(e) =>
-                setAddLinkerData({
-                  ...addLinkerData,
-                  cast: e.target.value,
-                })
-              }
-              required
-            >
-              <MenuItem value="string">String</MenuItem>
-              <MenuItem value="number">Number</MenuItem>
-              <MenuItem value="boolean">Boolean</MenuItem>
-            </Select>
+              helperText="Expression to evaluate the telemetry value (e.g., 'value * 2')"
+            />
+            <FormControl variant="outlined">
+              <InputLabel id="linker-key-label">Key</InputLabel>
+              <Select
+                id="linker-key"
+                labelId="linker-key-label"
+                label="Key"
+                value={addLinkerData.key || 's'}
+                onChange={(e) =>
+                  setAddLinkerData({
+                    ...addLinkerData,
+                    key: e.target.value,
+                  })
+                }
+                required
+              >
+                <MenuItem value="g">Get G</MenuItem>
+                <MenuItem value="a">GetArgs A</MenuItem>
+                <MenuItem value="s">Set S</MenuItem>
+                <MenuItem value="b">SetArgs B</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl variant="outlined">
+              <InputLabel id="linker-cast-label">Cast</InputLabel>
+              <Select
+                id="linker-cast"
+                labelId="linker-cast-label"
+                value={addLinkerData.cast || 'number'}
+                onChange={(e) =>
+                  setAddLinkerData({
+                    ...addLinkerData,
+                    cast: e.target.value,
+                  })
+                }
+                required
+              >
+                <MenuItem value="string">String</MenuItem>
+                <MenuItem value="number">Number</MenuItem>
+                <MenuItem value="boolean">Boolean</MenuItem>
+              </Select>
+            </FormControl>
           </>
         )}
       </Box>

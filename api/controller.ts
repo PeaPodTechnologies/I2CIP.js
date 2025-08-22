@@ -43,6 +43,12 @@ export function findSerialPort(path: string): Promise<string[]> {
   });
 }
 
+export function getSerialPorts(): Promise<string[]> {
+  return SerialPort.list().then(ports => {
+    return ports.map(port => port.path as string);
+  });
+}
+
 // TYPES
 
 /**
