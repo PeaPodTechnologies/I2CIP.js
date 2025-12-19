@@ -155,7 +155,7 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
     <Paper elevation={3} square={false} sx={{ padding: 2 }}>
       <div>{deviceId}</div>
       <div>{fqaToString(fqa)}</div>
-      {DEVICE_ARG_HAS[deviceId].b && (
+      {DEVICE_ARG_HAS[deviceId] && DEVICE_ARG_HAS[deviceId].b && (
         <Box
           component="form"
           sx={{
@@ -179,7 +179,7 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
           />
         </Box>
       )}
-      {DEVICE_ARG_HAS[deviceId].s && (
+      {DEVICE_ARG_HAS[deviceId] && DEVICE_ARG_HAS[deviceId].s && (
         <Box
           component="form"
           sx={{
@@ -203,7 +203,7 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
           />
         </Box>
       )}
-      {DEVICE_ARG_HAS[deviceId].s && (
+      {DEVICE_ARG_HAS[deviceId] && DEVICE_ARG_HAS[deviceId].s && (
         <Button
           variant="contained"
           disabled={
@@ -218,7 +218,7 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
           Set
         </Button>
       )}
-      {DEVICE_ARG_HAS[deviceId].a && (
+      {DEVICE_ARG_HAS[deviceId] && DEVICE_ARG_HAS[deviceId].a && (
         <Box
           component="form"
           sx={{
@@ -242,7 +242,7 @@ const Device: FC<{ deviceId: DeviceID; fqa: number }> = ({ deviceId, fqa }) => {
           />
         </Box>
       )}
-      {DEVICE_ARG_HAS[deviceId].g && (
+      {DEVICE_ARG_HAS[deviceId] && DEVICE_ARG_HAS[deviceId].g && (
         <Button
           variant="contained"
           disabled={

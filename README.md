@@ -115,12 +115,20 @@ yarn add --dev @types/uuid @types/yargs @types/jest @types/dotenv @types/serialp
 
 ## Architecture
 
-- Host: This Device (See OSX/Linux/WSL; Raspberry Pi)
-- (Micro-)Controller: Target (i.e. UART Arduino/ESP32)
+- Host: This Device (See OSX/Linux; Windows; Raspberry Pi)
+- Microcontroller: Target (i.e. UART Arduino/ESP32)
 
-### OSX, Linux, WSL
+### OSX, Linux
 
 <!-- See Oreille, PeaPod/software -->
+
+### Windows with WSL/Git Bash
+
+1. Install NVM for Windows (Node.JS, npm), Python, Visual Studio 26 with C++ Build Tools
+
+2. `npm install --global yarn typescript`
+
+3. `yarn install` (might take a minute)
 
 ### Raspberry Pi
 

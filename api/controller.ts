@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { SerialPort, ReadlineParser } from 'serialport';
 import { ControllerTXError, DebugJsonSerialportError } from './errors';
 import { DebugJsonConsole as ui } from './ui';
-import { DebugJsonMessage } from './types';
+import { DebugJsonMessage, DebugJsonMessageTypes } from './types';
 
 // import { Gpio } from 'onoff';
 
@@ -303,10 +303,13 @@ export class MicroController implements Controller {
  */
 export class SimulatedController implements Controller {
   private intervals: NodeJS.Timeout[] = [];
+  private readonly startDate: number = Date.now();
+  private output?: (msg: DebugJsonMessage[]) => void;
 
   constructor(readonly parameters: SimulatorConfig) {}
 
   async start(onMessage: (msg: DebugJsonMessage[]) => void): Promise<void> {
+    this.output = onMessage;
     for (const label of Object.keys(this.parameters)) {
       this.intervals.push(
         setInterval(() => {
@@ -321,7 +324,23 @@ export class SimulatedController implements Controller {
       );
     }
   }
-  write() {}
+  write(instructions: DebugJsonMessage): void {
+    switch(instructions.type) {
+    case 'command':
+      if(instructions.data && Object.keys(instructions.data).includes('rebuild')) {
+        ui.info('SIMULATED CONTROLLER REBUILD TREE');
+        if(this.output) {
+          this.output([
+            this.generateTree()
+          ]);
+        }
+      }
+      break;
+    default:
+      ui.info(`SIMULATED CONTROLLER WRITE: ${JSON.stringify(instructions)}`);
+      break;
+    }
+  }
   async stop(): Promise<void> {
     for (const interval of this.intervals) {
       clearInterval(interval);
@@ -339,12 +358,18 @@ export class SimulatedController implements Controller {
     min: number,
     max: number
   ): DebugJsonMessage {
-		const d = (Math.random() * (max - min) + min);
+    const d = (Math.random() * (max - min) + min);
     return {
       type: 'event',
+      timestamp: Date.now() - this.startDate,
       data: {
         [label]: d,
       },
     };
+  }
+
+  private generateTree() {
+    // modules: {devices: {id: string, fqa: number}[]}[]
+    return {type: 'tree' as DebugJsonMessageTypes, timestamp: Date.now() - this.startDate, data: Object.keys(this.parameters).reduce<{[key: string]: number[]}[]>((acc, label, idx) => { acc[0][label] = [idx]; return acc; }, [{}])};
   }
 }

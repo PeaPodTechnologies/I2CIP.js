@@ -1,0 +1,1 @@
+This is only here to keep the logs/ folder in GitHub.
