@@ -306,16 +306,16 @@ export class SimulatedController implements Controller {
 
   constructor(readonly parameters: SimulatorConfig) {}
 
-  async start(onMessage: (msg: DebugJsonMessage) => void): Promise<void> {
+  async start(onMessage: (msg: DebugJsonMessage[]) => void): Promise<void> {
     for (const label of Object.keys(this.parameters)) {
       this.intervals.push(
         setInterval(() => {
           onMessage(
-            this.generateData(
+            [this.generateData(
               label,
               this.parameters[label].min,
               this.parameters[label].max
-            )
+            )]
           );
         }, this.parameters[label].interval)
       );

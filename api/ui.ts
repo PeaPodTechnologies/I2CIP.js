@@ -2,7 +2,7 @@ import { Ora, Spinner } from 'ora';
 import ora from 'ora';
 // import * as blessed from 'blessed';
 
-const DEBUGJSON_DEFAULT_SPINNER: Spinner = {
+const I2CIP_DEFAULT_SPINNER: Spinner = {
   interval: 50,
   frames: [
     '▁▁▁▁▁▁▁▁▁▁▁',
@@ -159,7 +159,7 @@ class DebugJsonUI {
     } else {
       this.spinner = ora({ 
         // stream: this, 
-        spinner: DEBUGJSON_DEFAULT_SPINNER
+        spinner: I2CIP_DEFAULT_SPINNER
       });
     }
     return this.spinner;

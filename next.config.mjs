@@ -1,11 +1,11 @@
 // next.config.ts
-console.log("Using next.config with Node Version:", process.version);
+console.log('Using next.config with Node Version:', process.version);
 var nextConfig = {
   /* config options here */
   typescript: {
-    tsconfigPath: "./next.tsconfig.json"
+    tsconfigPath: './next.tsconfig.json'
   },
-  output: "standalone"
+  output: 'standalone'
 };
 var next_config_default = nextConfig;
 export {

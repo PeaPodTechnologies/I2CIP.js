@@ -5,16 +5,12 @@ import {
 
 console.log('Building API...');
 
-// Build API
-// const build_api = 
-await esbuild.build({
+const esbuildConfig = {
   format: 'esm',
   platform: 'node',
   target: 'esnext',
   packages: 'external',
   bundle: true,
-  entryPoints: ['./api/*.ts'],
-  outdir: './api/',
   allowOverwrite: true,
   keepNames: true,
   outExtension: { '.js': '.mjs' },
@@ -25,22 +21,20 @@ await esbuild.build({
     esmExtension: 'mjs',
     filter: /^\..*\.(js|ts)$/ // '.*.js' or '.*.ts'
   })]
-}).catch((err) => { console.error(err); process.exit(1); } );
+};
 
-// Build next.config.js
-// const build_config = esbuild.build({
-//   format: 'cjs',
-//   platform: 'node',
-//   target: 'esnext',
-//   packages: 'external',
-//   bundle: true,
-//   entryPoints: ['./next.config.ts'],
-//   outdir: './',
-//   allowOverwrite: true,
-//   keepNames: true,
-//   plugins: [esbuildPluginFilePathExtensions({
-//     esm: false,
-//   })]
-// }).catch(() => process.exit(1));
+// Build API
+const build_api = esbuild.build({
+  ...esbuildConfig,
+  entryPoints: ['./api/*.ts'],
+  outdir: './api/'
+});
 
-// await Promise.all([build_api, build_config]);
+// Build server
+const build_server = esbuild.build({
+  ...esbuildConfig,
+  entryPoints: ['./server.ts'],
+  outdir: './'
+});
+
+await Promise.all([build_api, build_server]).catch((err) => { console.error(err); process.exit(1); } );

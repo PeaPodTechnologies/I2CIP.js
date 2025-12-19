@@ -1,7 +1,7 @@
 {
-  "name": "debugjson",
+  "name": "i2cip.js",
   "version": "0.1.0",
-  "main": "index.js",
+  "main": "server.mjs",
   "author": "Jayden Lefebvre <jayden.lefebvre55@gmail.com>",
   "license": "MIT",
   "private": false,
@@ -21,9 +21,11 @@
   },
   "scripts": {
     "dev": "yarn buildapi && yarn start",
+    "devsim": "yarn buildapi && yarn startsim",
     "build": "yarn upgrade && next build",
-    "buildapi": "rm api/*.mjs; yarn install --dev --force && node api.esbuild.mjs",
+    "buildapi": "rm api/*.mjs; rm server.mjs; yarn install --dev --force && node api.esbuild.mjs",
     "start": "node server.mjs",
+    "startsim": "node server.mjs --simulator",
     "lint": "next lint --fix",
     "rebuild_serialport": "pushd lib/serialport; npm install && npm run format && npm run typecheck && npm run test && npm run build; popd",
     "deploy_functions": "firebase deploy --only functions"
